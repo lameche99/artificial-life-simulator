@@ -161,6 +161,21 @@ md"Time of simulation, ``T_{\text{max}}``"
 @bind t NumberField(0:1:1000; default=50)
   ╠═╡ =#
 
+# ╔═╡ 4604ca83-88f8-4cd1-b614-c327de23f32f
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	BA_gpu = copy(A)
+	anim_gpu = @animate for t0 in 1:t
+		BA_gpu = conway_gpu(BA_gpu)
+		show_image(BA_gpu)
+		# print("t=$t0 ticks\r")
+		# flush(stdout)
+	end
+	gif(anim_gpu, fps=10, loop=0)
+end
+  ╠═╡ =#
+
 # ╔═╡ de781192-2d09-45c9-9a8b-c18bf0431a45
 # ╠═╡ disabled = true
 # ╠═╡ skip_as_script = true
@@ -260,21 +275,6 @@ begin
 	show_image(B_gpu)
 end
 
-# ╔═╡ 4604ca83-88f8-4cd1-b614-c327de23f32f
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	BA_gpu = copy(A)
-	anim_gpu = @animate for t0 in 1:t
-		BA_gpu = conway_gpu(BA_gpu)
-		show_image(BA_gpu)
-		# print("t=$t0 ticks\r")
-		# flush(stdout)
-	end
-	gif(anim_gpu, fps=10, loop=0)
-end
-  ╠═╡ =#
-
 # ╔═╡ 693d3f9c-1078-4bff-86e0-9e4c40405b19
 begin
 	agent_pos=[Int(n/2),Int(n/2)]
@@ -300,6 +300,89 @@ begin
 	end
 	show_image(encode_agent(agent_pos2,B5_gpu))
 end
+
+# ╔═╡ 72a7cb99-5483-4c82-9554-007c2ba44413
+@bind altPs NumberField(0:100; default=4)
+
+# ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
+begin
+	alt_pos = rand(1:n, (altPs,2));
+	alt_h = rand(1:20, (altPs,1));
+	hcat(alt_pos, alt_h)
+	alt_p = hcat(alt_pos, alt_h);
+end
+
+# ╔═╡ cb6482b5-c003-4ad2-8d8b-a60f3946b255
+@bind power NumberField(0:1000; default=3)
+
+# ╔═╡ ba6660df-59b7-4c70-b30f-b8548d63b0d2
+function alt_kernel(A, B, m, n, alt_p, k, power)
+	i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+	j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+	if i <= m && j <= n
+		B[i, j] = 0
+		norm = 0
+		for ki in 1:k
+			d = ((alt_p[ki, 1] - i)^2 + (alt_p[ki, 2] - j)^2)^0.5
+			if (d > 0)
+				B[i,j] += alt_p[ki, 3]/d^power
+				norm += 1/d^power
+			else
+				B[i,j] = alt_p[ki, 3]
+				return
+			end
+		end
+		B[i, j] /= norm
+	end
+	return
+end
+
+# ╔═╡ d41c1874-e39c-4b9f-b943-7d7543a1c402
+function topography_gpu(A, alt_p, power)
+    m, n = size(A)
+	k, _ = size(alt_p)
+	A_gpu = CuArray(A)
+    B = similar(A_gpu)  # Create a GPU array of the same size and type as A
+
+	threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
+    blocks_x = ceil(Int, m / threads_x)
+    blocks_y = ceil(Int, n / threads_y)
+	
+ 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) alt_kernel(A_gpu, B, m, n, CuArray(alt_p), k, power)
+    
+    return collect(B)
+end
+
+# ╔═╡ 8532f267-7e5f-45bb-8d82-6f86cfff7cc4
+begin
+	topo = zeros(Float64, n, n);
+	topo = topography_gpu(topo, alt_p, power)
+	show_image(topo, :grays)
+end
+
+# ╔═╡ 82d0e800-deb1-42fe-b1d3-2018d8639ff8
+md"neighbourhood radius, `n_radius` $(@bind n_radius NumberField(0:1000; default=3))"
+
+# ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
+contour(1:n, 1:n,topo)
+
+# ╔═╡ 81653527-a1fb-49ab-99db-5fdda6b669fd
+md"""exploration radius, `e_radius = ` $(@bind e_radius NumberField(0:1000; default=3))"""
+
+# ╔═╡ c8171ca3-c2d7-4220-b073-1ec76f559b25
+md"""
+The taylor series expansion of $f(x+h)$ at $h=0$ is,
+
+$$f(x+h)=\frac{1}{24} h^4 f^{(4)}(x)+\frac{1}{6} h^3 f^{(3)}(x)+\frac{1}{2} h^2 f''(x)+h f'(x)+f(x)+O\left(h^5\right)$$
+
+We can calculate the slope, $f'(x)$, at $x$ in the following manner,
+
+$$\frac{f(h+x)-f(x-h)}{2 h}$$
+"""
+
+# ╔═╡ 15f17206-db9f-4896-9e32-93d025501917
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1698,5 +1781,16 @@ version = "1.4.1+1"
 # ╠═b32adad4-c88b-4c19-98d1-2eaa2454b1fe
 # ╠═693d3f9c-1078-4bff-86e0-9e4c40405b19
 # ╠═f2b63504-43ad-45e2-95de-7a40f95a6bc8
+# ╠═72a7cb99-5483-4c82-9554-007c2ba44413
+# ╠═0f0779fa-d610-429f-acd3-ac82b7842b14
+# ╠═cb6482b5-c003-4ad2-8d8b-a60f3946b255
+# ╠═ba6660df-59b7-4c70-b30f-b8548d63b0d2
+# ╠═d41c1874-e39c-4b9f-b943-7d7543a1c402
+# ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
+# ╠═82d0e800-deb1-42fe-b1d3-2018d8639ff8
+# ╠═3750d105-df07-4af7-9143-82b065fbb041
+# ╠═81653527-a1fb-49ab-99db-5fdda6b669fd
+# ╠═c8171ca3-c2d7-4220-b073-1ec76f559b25
+# ╠═15f17206-db9f-4896-9e32-93d025501917
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
