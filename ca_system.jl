@@ -365,7 +365,7 @@ end
 md"neighbourhood radius, `n_radius` $(@bind n_radius NumberField(0:1000; default=3))"
 
 # ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
-contour(1:n, 1:n,topo)
+contour(1:n, 1:n,topo, levels=60, fill=true)
 
 # ╔═╡ 81653527-a1fb-49ab-99db-5fdda6b669fd
 md"""exploration radius, `e_radius = ` $(@bind e_radius NumberField(0:1000; default=3))"""
@@ -378,11 +378,104 @@ $$f(x+h)=\frac{1}{24} h^4 f^{(4)}(x)+\frac{1}{6} h^3 f^{(3)}(x)+\frac{1}{2} h^2 
 
 We can calculate the slope, $f'(x)$, at $x$ in the following manner,
 
-$$\frac{f(h+x)-f(x-h)}{2 h}$$
+$$\frac{f(x+h)-f(x-h)}{2 h} = f'(x)+\frac{1}{6} h^2 f^{(3)}(x)+O\left(h^4\right)$$
+
+This is accurate with an error term $\propto h^2$. To improve, we use a neighbourhood of radius 2. That is, we use the fact that,
+
+$$\frac{f(x+2h)-f(x-2 h)}{4 h}=f'(x)+\frac{2}{3} h^2 f^{(3)}(x)+O\left(h^4\right)$$
+
+Like so,
+
+$$\frac{1}{3} \left(4\cdot\frac{f(x+h)-f(x-h)}{2 h}-\frac{f(x+2h)-f(x-2 h)}{4 h}\right)=f'(x)-\frac{1}{30} h^4 f^{(5)}(x)+O\left(h^5\right)$$
 """
 
 # ╔═╡ 15f17206-db9f-4896-9e32-93d025501917
+begin
+	function slope_kernel(A, Bx, By, m, n)
+		i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+		j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+		if 3 <= i <= m-2 && 3 <= j <= n-2
+			# caluclate second order approximation of differential
+			xph = A[i+1,j]
+			xmh = A[i-1,j]
+			xp2h = A[i+2,j]
+			xm2h = A[i-2,j]
 
+			yph = A[i,j+1]
+			ymh = A[i,j-1]
+			yp2h = A[i,j+2]
+			ym2h = A[i,j-2]
+
+			dfbydx = 1/3*(4*(xph-xmh)/2 - (xp2h-xm2h)/4)
+			dfbydy = 1/3*(4*(yph-ymh)/2 - (yp2h-ym2h)/4)
+
+			# B[i, j] = atan(dfbydy, dfbydx)
+			norm = (dfbydx^2+dfbydy^2)^0.5
+			Bx[i, j] = dfbydx/norm
+			By[i, j] = dfbydy/norm
+		elseif 2 <= i <= m-1 && 2 <= j <= n-1
+			xph = A[i+1,j]
+			xmh = A[i-1,j]
+
+			yph = A[i,j+1]
+			ymh = A[i,j-1]
+
+			dfbydx = (xph-xmh)/2
+			dfbydy = (yph-ymh)/2
+
+			# B[i, j] = atan(dfbydy, dfbydx)
+			norm = (dfbydx^2+dfbydy^2)^0.5
+			Bx[i, j] = dfbydx/norm
+			By[i, j] = dfbydy/norm
+		elseif 1 <= i <= m && 1 <= j <= n
+			Bx[i, j] = 0.0
+			By[i, j] = 0.0
+		end
+		return
+	end
+	
+	function slope_gpu(topo)
+	    m, n = size(topo)
+		topo_gpu = CuArray(topo)
+		outp = fill((0.0, 0.0), n, n)
+	    output_x = CuArray(fill(0.0, n, n))  
+	    output_y = CuArray(fill(0.0, n, n))  
+		threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+	    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
+	    blocks_x = ceil(Int, m / threads_x)
+	    blocks_y = ceil(Int, n / threads_y)
+		
+	 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) slope_kernel(topo_gpu, output_x, output_y, m, n)
+	    
+	    return collect(output_x), collect(output_y)
+	end
+end
+
+# ╔═╡ 230af3ed-9267-497c-a697-e422bcf04665
+begin
+	dx, dy = slope_gpu(topo);
+	
+	slope = [(dx[i, j], dy[i, j]) for i in 1:n, j in 1:n];
+end
+
+# ╔═╡ 46534c16-9fe3-4c2b-a10b-8093cbc03dc2
+begin
+	x_coordinates = [el[1] for el in slope];
+	y_coordinates = [el[2] for el in slope];
+	quiver(repeat(reshape(1:n, 1, n), n, 1), transpose(repeat(reshape(1:n, 1, n), n, 1)), quiver=( x_coordinates, y_coordinates))
+end
+
+# ╔═╡ 35b16cc6-18ae-4663-968c-039e74ddf7c9
+transpose(repeat(reshape(1:n, 1, n), n, 1))
+
+# ╔═╡ 348c284e-272e-477d-8a66-4f6291c72832
+repeat(reshape(1:n, 1, n), n, 1)
+
+# ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
+begin
+	using DelimitedFiles
+	writedlm("slope.txt", slope)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1792,5 +1885,10 @@ version = "1.4.1+1"
 # ╠═81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╠═c8171ca3-c2d7-4220-b073-1ec76f559b25
 # ╠═15f17206-db9f-4896-9e32-93d025501917
+# ╠═230af3ed-9267-497c-a697-e422bcf04665
+# ╠═46534c16-9fe3-4c2b-a10b-8093cbc03dc2
+# ╠═35b16cc6-18ae-4663-968c-039e74ddf7c9
+# ╠═348c284e-272e-477d-8a66-4f6291c72832
+# ╠═c2a9fa1f-a405-4767-aec2-42196a70cc61
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
