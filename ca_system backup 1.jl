@@ -42,9 +42,6 @@ function show_image(A, color_range=:viridis)
 	heatmap(1:size(A, 1), 1:size(A, 2), A, aspect_ratio=:equal, color=color_range)
 end
 
-# ╔═╡ 11f7bf70-4a39-451c-9bdb-9369742dcce0
-md"Random Seed, $(@bind seed Slider(0:1000, default=809, show_value=true))"
-
 # ╔═╡ df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 md"## Initial State"
 
@@ -142,31 +139,27 @@ function conway_gpu(A)
 end
 
 # ╔═╡ 2fe91b37-1c3f-49ce-bfa2-702a180b78a0
-begin
-	md"``X``, ``Y`` subdivisions, ``n`` = $(@bind n NumberField(0:100; default=100))"
-end
+md"``X``, ``Y`` subdivisions, ``n``"
 
-# ╔═╡ 8327cfec-51df-4c38-839a-b7212ddb24e7
-md"``X_{\max}, Y_{\max}``, L = $(@bind L NumberField(0:100; default=100))"
+# ╔═╡ 14c8f69f-e8de-4d45-927a-4c01f5de2980
+@bind n NumberField(0:100; default=100)
 
 # ╔═╡ 4167489e-715b-4e62-8e56-3f2cd1317ccd
+# ╠═╡ disabled = true
+#=╠═╡
 begin
-	Random.seed!(seed)
+	# Random.seed!(125)
 	# sample code for a 2D array
-	A_L = rand(Float64, L, L) .< 0.03
-	A = zeros(n, n)
-
-	for i in 1:n
-		for j in 1:n
-			A[i, j] = A_L[Int(ceil(i/(n/L))), Int(ceil(j/(n/L)))]
-		end
-	end
-	
+	A = rand(0:1, n, n)
 	
 	# use show_image to display the array A
 	show_image(A)
 	# show_image(A, [(0,0,0), (1,1,1)])
 end
+  ╠═╡ =#
+
+# ╔═╡ 8327cfec-51df-4c38-839a-b7212ddb24e7
+md"``X_{\max}, Y_{\max}``, L = $(@bind L NumberField(0:100; default=100))"
 
 # ╔═╡ 701891a4-6a87-427e-af9b-487dec1dee4d
 md"Time of simulation, ``T_{\text{max}}``"
@@ -291,7 +284,6 @@ md"Max height, $(@bind max_height NumberField(0:100; default=L/10))"
 
 # ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
 begin
-	Random.seed!(seed)
 	alt_pos = rand(1:n, (altPs,2));
 	alt_h = rand(Float64, (altPs,1))*max_height;
 	hcat(alt_pos, alt_h)
@@ -357,37 +349,10 @@ begin
 	contour(1:n, 1:n,topo, levels=60, fill=true)
 end
 
-# ╔═╡ 1add5389-3a8b-40b7-b999-8df22bb45900
-begin
-	function plot_topo_kernel(topo, bushes, out, m, n)
-		i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
-		j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
-		if 1 <= i <= m && 1 <= j <= n
-			out[i, j] = topo[i,j] + bushes[i,j]*1
-		end
-		return
-	end
-	
-	function plot_topo_gpu(topo, bushes)
-	    m, n = size(topo)
-		topo_gpu = CuArray(topo)
-		bushes_gpu = CuArray(bushes)
-		output = similar(topo_gpu)
-		threads_x = min(32, m)  # Limit to 32 threads in the x dimension
-	    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
-	    blocks_x = ceil(Int, m / threads_x)
-	    blocks_y = ceil(Int, n / threads_y)
-		
-	 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) plot_topo_kernel(topo_gpu, bushes_gpu, output, m, n)
-	    
-	    return collect(output)
-	end
-end
-
-# ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
+# ╔═╡ a1e05423-1f89-4b67-90b0-09e79200be2e
 begin
 	plotly()
-	surface_plot = plot(1:n, 1:n,plot_topo_gpu(topo, A), st=:surface, ratio=1, zlim=[0,L])
+	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L])
 end
 
 # ╔═╡ 81653527-a1fb-49ab-99db-5fdda6b669fd
@@ -488,16 +453,14 @@ begin
 end
 
 # ╔═╡ 46534c16-9fe3-4c2b-a10b-8093cbc03dc2
-# ╠═╡ disabled = true
-# ╠═╡ skip_as_script = true
-#=╠═╡
 begin
 	x_coordinates = [el[1] for el in slope];
 	y_coordinates = [el[2] for el in slope];
 	quiver(repeat(reshape(1:n, 1, n), n, 1), transpose(repeat(reshape(1:n, 1, n), n, 1)), quiver=( x_coordinates, y_coordinates))
 end
- 
-  ╠═╡ =#
+
+# ╔═╡ 35b16cc6-18ae-4663-968c-039e74ddf7c9
+transpose(repeat(reshape(1:n, 1, n), n, 1))
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1876,7 +1839,6 @@ version = "1.4.1+1"
 # ╟─7c345a38-6f6c-4ede-a46b-c2942c771eba
 # ╠═9083379c-842e-4f7c-936f-1f9e66861af0
 # ╠═c8c9a170-7cc7-4bb3-b9dc-1654f4c2cefd
-# ╠═11f7bf70-4a39-451c-9bdb-9369742dcce0
 # ╟─df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 # ╠═4167489e-715b-4e62-8e56-3f2cd1317ccd
 # ╟─e5c741d7-7c52-4097-8d02-89d76495d53f
@@ -1884,10 +1846,12 @@ version = "1.4.1+1"
 # ╠═7382f5ff-0c87-4d1d-b45f-80286353135f
 # ╠═fd3512a7-8d52-4d25-9ad8-0cc80555da7f
 # ╠═2a3753d3-c08c-4e85-907e-9ebb5a67dab3
-# ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
+# ╟─2fe91b37-1c3f-49ce-bfa2-702a180b78a0
+# ╠═14c8f69f-e8de-4d45-927a-4c01f5de2980
 # ╠═8327cfec-51df-4c38-839a-b7212ddb24e7
 # ╟─701891a4-6a87-427e-af9b-487dec1dee4d
 # ╠═7e042a99-c645-4af4-aa6f-6fc6ae0b3177
+# ╠═0dcb41bb-0892-4ef6-827e-5f1e69a04b05
 # ╠═4604ca83-88f8-4cd1-b614-c327de23f32f
 # ╟─de781192-2d09-45c9-9a8b-c18bf0431a45
 # ╠═7acb0fc3-cbe6-4723-b1cb-381071ac76a8
@@ -1896,6 +1860,8 @@ version = "1.4.1+1"
 # ╠═4ec0a200-78df-4cfd-9efe-105dad6f4ef3
 # ╠═2be8edb3-16a6-4bb0-9a26-231a98230dbb
 # ╠═b32adad4-c88b-4c19-98d1-2eaa2454b1fe
+# ╟─693d3f9c-1078-4bff-86e0-9e4c40405b19
+# ╟─f2b63504-43ad-45e2-95de-7a40f95a6bc8
 # ╠═72a7cb99-5483-4c82-9554-007c2ba44413
 # ╠═cd4ee775-74d9-417f-9c97-6c8d321d7580
 # ╠═0f0779fa-d610-429f-acd3-ac82b7842b14
@@ -1905,13 +1871,13 @@ version = "1.4.1+1"
 # ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
 # ╠═82d0e800-deb1-42fe-b1d3-2018d8639ff8
 # ╠═3750d105-df07-4af7-9143-82b065fbb041
-# ╠═1add5389-3a8b-40b7-b999-8df22bb45900
-# ╠═2fff7da7-16ff-407d-92ef-24ee3469b9f4
+# ╠═a1e05423-1f89-4b67-90b0-09e79200be2e
 # ╠═81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
 # ╠═15f17206-db9f-4896-9e32-93d025501917
 # ╠═230af3ed-9267-497c-a697-e422bcf04665
 # ╠═46534c16-9fe3-4c2b-a10b-8093cbc03dc2
+# ╠═35b16cc6-18ae-4663-968c-039e74ddf7c9
 # ╠═c2a9fa1f-a405-4767-aec2-42196a70cc61
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

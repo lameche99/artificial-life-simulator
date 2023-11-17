@@ -43,7 +43,7 @@ function show_image(A, color_range=:viridis)
 end
 
 # ╔═╡ 11f7bf70-4a39-451c-9bdb-9369742dcce0
-md"Random Seed, $(@bind seed Slider(0:1000, default=809, show_value=true))"
+md"Random Seed, $(@bind seed Slider(0:1000, default=125))"
 
 # ╔═╡ df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 md"## Initial State"
@@ -153,7 +153,7 @@ md"``X_{\max}, Y_{\max}``, L = $(@bind L NumberField(0:100; default=100))"
 begin
 	Random.seed!(seed)
 	# sample code for a 2D array
-	A_L = rand(Float64, L, L) .< 0.03
+	A_L = rand(Float64, L, L) .< 0.05
 	A = zeros(n, n)
 
 	for i in 1:n
@@ -496,9 +496,8 @@ begin
 	y_coordinates = [el[2] for el in slope];
 	quiver(repeat(reshape(1:n, 1, n), n, 1), transpose(repeat(reshape(1:n, 1, n), n, 1)), quiver=( x_coordinates, y_coordinates))
 end
- 
   ╠═╡ =#
-
+  
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
