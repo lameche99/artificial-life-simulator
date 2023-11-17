@@ -138,7 +138,7 @@ end
 md"Grid size, ``n``"
 
 # ╔═╡ 14c8f69f-e8de-4d45-927a-4c01f5de2980
-@bind n NumberField(0:100; default=30)
+@bind n NumberField(0:100; default=100)
 
 # ╔═╡ 4167489e-715b-4e62-8e56-3f2cd1317ccd
 begin
@@ -302,12 +302,15 @@ begin
 end
 
 # ╔═╡ 72a7cb99-5483-4c82-9554-007c2ba44413
-@bind altPs NumberField(0:100; default=4)
+md"Number of height points, $(@bind altPs NumberField(0:100; default=7))"
+
+# ╔═╡ cd4ee775-74d9-417f-9c97-6c8d321d7580
+md"Max height, $(@bind max_height NumberField(0:100; default=20))"
 
 # ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
 begin
 	alt_pos = rand(1:n, (altPs,2));
-	alt_h = rand(1:20, (altPs,1));
+	alt_h = rand(1:max_height, (altPs,1));
 	hcat(alt_pos, alt_h)
 	alt_p = hcat(alt_pos, alt_h);
 end
@@ -358,6 +361,7 @@ end
 begin
 	topo = zeros(Float64, n, n);
 	topo = topography_gpu(topo, alt_p, power)
+	plotly()
 	show_image(topo, :grays)
 end
 
@@ -365,7 +369,16 @@ end
 md"neighbourhood radius, `n_radius` $(@bind n_radius NumberField(0:1000; default=3))"
 
 # ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
-contour(1:n, 1:n,topo, levels=60, fill=true)
+begin
+	plotly()
+	contour(1:n, 1:n,topo, levels=60, fill=true)
+end
+
+# ╔═╡ a1e05423-1f89-4b67-90b0-09e79200be2e
+begin
+	plotly()
+	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[1,n])
+end
 
 # ╔═╡ 81653527-a1fb-49ab-99db-5fdda6b669fd
 md"""exploration radius, `e_radius = ` $(@bind e_radius NumberField(0:1000; default=3))"""
@@ -458,6 +471,12 @@ begin
 	slope = [(dx[i, j], dy[i, j]) for i in 1:n, j in 1:n];
 end
 
+# ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
+begin
+	using DelimitedFiles
+	writedlm("slope.txt", slope)
+end
+
 # ╔═╡ 46534c16-9fe3-4c2b-a10b-8093cbc03dc2
 begin
 	x_coordinates = [el[1] for el in slope];
@@ -468,20 +487,12 @@ end
 # ╔═╡ 35b16cc6-18ae-4663-968c-039e74ddf7c9
 transpose(repeat(reshape(1:n, 1, n), n, 1))
 
-# ╔═╡ 348c284e-272e-477d-8a66-4f6291c72832
-repeat(reshape(1:n, 1, n), n, 1)
-
-# ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
-begin
-	using DelimitedFiles
-	writedlm("slope.txt", slope)
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
@@ -491,6 +502,7 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 [compat]
 CUDA = "~5.0.0"
 ColorTypes = "~0.11.4"
+DelimitedFiles = "~1.9.1"
 LaTeXStrings = "~1.3.0"
 OffsetArrays = "~1.12.10"
 Plots = "~1.39.0"
@@ -503,7 +515,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "5d09c9307eb967d79743d528190f6ebf412a60b8"
+project_hash = "0e3ed1107a8be09b642dbb10aecfc210a8939671"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1875,6 +1887,7 @@ version = "1.4.1+1"
 # ╠═693d3f9c-1078-4bff-86e0-9e4c40405b19
 # ╠═f2b63504-43ad-45e2-95de-7a40f95a6bc8
 # ╠═72a7cb99-5483-4c82-9554-007c2ba44413
+# ╠═cd4ee775-74d9-417f-9c97-6c8d321d7580
 # ╠═0f0779fa-d610-429f-acd3-ac82b7842b14
 # ╠═cb6482b5-c003-4ad2-8d8b-a60f3946b255
 # ╠═ba6660df-59b7-4c70-b30f-b8548d63b0d2
@@ -1882,13 +1895,13 @@ version = "1.4.1+1"
 # ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
 # ╠═82d0e800-deb1-42fe-b1d3-2018d8639ff8
 # ╠═3750d105-df07-4af7-9143-82b065fbb041
+# ╠═a1e05423-1f89-4b67-90b0-09e79200be2e
 # ╠═81653527-a1fb-49ab-99db-5fdda6b669fd
-# ╠═c8171ca3-c2d7-4220-b073-1ec76f559b25
+# ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
 # ╠═15f17206-db9f-4896-9e32-93d025501917
 # ╠═230af3ed-9267-497c-a697-e422bcf04665
 # ╠═46534c16-9fe3-4c2b-a10b-8093cbc03dc2
 # ╠═35b16cc6-18ae-4663-968c-039e74ddf7c9
-# ╠═348c284e-272e-477d-8a66-4f6291c72832
 # ╠═c2a9fa1f-a405-4767-aec2-42196a70cc61
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
