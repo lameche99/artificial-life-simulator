@@ -31,7 +31,7 @@ begin
 end
 
 # ╔═╡ 4727903f-a54b-4d73-8998-fa99bb2481aa
-md"# _Conway's Game of Life_"
+md"# _Cellular Automata for Topography and Enemies_"
 
 # ╔═╡ 7c345a38-6f6c-4ede-a46b-c2942c771eba
 md"Just Importing libraries here..."
@@ -223,7 +223,7 @@ end
   ╠═╡ =#
 
 # ╔═╡ 29fd69aa-1b99-4047-89a3-62b89c631062
-md"## Agents in our CA model"
+md"## (Legacy) Agents in our CA model"
 
 # ╔═╡ 0f344406-4816-4cd6-ae8e-83a8b918fa11
 function next_pos(current_pos, B, seed)
@@ -283,6 +283,9 @@ end
 # ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
 Markdown.parse("``t=$(t)\\ \\text{ticks}``")
 
+# ╔═╡ fffa26a7-ecf6-4be0-ab7c-423665caf7a5
+md"# Topography"
+
 # ╔═╡ 72a7cb99-5483-4c82-9554-007c2ba44413
 md"Number of height points, $(@bind altPs NumberField(0:100; default=7))"
 
@@ -302,54 +305,69 @@ end
 @bind power NumberField(0:1000; default=3)
 
 # ╔═╡ ba6660df-59b7-4c70-b30f-b8548d63b0d2
-function alt_kernel(A, B, m, n, alt_p, k, power)
-	i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
-	j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
-	if i <= m && j <= n
-		B[i, j] = 0
-		norm = 0
-		for ki in 1:k
-			d = ((alt_p[ki, 1] - i)^2 + (alt_p[ki, 2] - j)^2)^0.5
-			if (d > 0)
-				B[i,j] += alt_p[ki, 3]/d^power
-				norm += 1/d^power
-			else
-				B[i,j] = alt_p[ki, 3]
-				return
+begin
+	function alt_kernel(A, B, m, n, alt_p, k, power)
+		i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+		j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+		if i <= m && j <= n
+			B[i, j] = 0
+			norm = 0
+			for ki in 1:k
+				d = ((alt_p[ki, 1] - i)^2 + (alt_p[ki, 2] - j)^2)^0.5
+				if (d > 0)
+					B[i,j] += alt_p[ki, 3]/d^power
+					norm += 1/d^power
+				else
+					B[i,j] = alt_p[ki, 3]
+					return
+				end
 			end
+			B[i, j] /= norm
 		end
-		B[i, j] /= norm
+		return
 	end
-	return
-end
-
-# ╔═╡ d41c1874-e39c-4b9f-b943-7d7543a1c402
-function topography_gpu(A, alt_p, power)
-    m, n = size(A)
-	k, _ = size(alt_p)
-	A_gpu = CuArray(A)
-    B = similar(A_gpu)  # Create a GPU array of the same size and type as A
-
-	threads_x = min(32, m)  # Limit to 32 threads in the x dimension
-    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
-    blocks_x = ceil(Int, m / threads_x)
-    blocks_y = ceil(Int, n / threads_y)
 	
- 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) alt_kernel(A_gpu, B, m, n, CuArray(alt_p), k, power)
-    
-    return collect(B)
+	function topography_gpu(A, alt_p, power)
+	    m, n = size(A)
+		k, _ = size(alt_p)
+		A_gpu = CuArray(A)
+	    B = similar(A_gpu)  # Create a GPU array of the same size and type as A
+	
+		threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+	    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
+	    blocks_x = ceil(Int, m / threads_x)
+	    blocks_y = ceil(Int, n / threads_y)
+		
+	 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) alt_kernel(A_gpu, B, m, n, CuArray(alt_p), k, power)
+	    
+	    return collect(B)
+	end
+	md"Kernel and Method to generate Topography"
 end
 
 # ╔═╡ 8532f267-7e5f-45bb-8d82-6f86cfff7cc4
 begin
 	topo = zeros(Float64, n, n);
 	topo = topography_gpu(topo, alt_p, power)
-	plotly()
-	show_image(topo, :grays)
+	md"Let's define the topography using the control points"
+	# plotly()
+	# show_image(topo, :grays)
 end
 
 # ╔═╡ 82d0e800-deb1-42fe-b1d3-2018d8639ff8
 md"neighbourhood radius, `n_radius` $(@bind n_radius NumberField(0:1000; default=3))"
+
+# ╔═╡ 8f0937f0-813b-4256-a8b9-afb22e092a42
+md"Topography of the system"
+
+# ╔═╡ 12351738-ddd3-4051-8880-504ecff343af
+begin
+	plotly()
+	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L])
+end
+
+# ╔═╡ 6d4076dc-68c8-42f8-a43e-222e3410bdbf
+md"Topography contour"
 
 # ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
 begin
@@ -384,11 +402,17 @@ begin
 	end
 end
 
+# ╔═╡ 9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
+md"Topography with vegetation"
+
 # ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
 begin
 	plotly()
 	surface_plot = plot(1:n, 1:n,plot_topo_gpu(topo, A), st=:surface, ratio=1, zlim=[0,L])
 end
+
+# ╔═╡ 08c8c238-8a24-4743-aed5-0e2649758b61
+md"### Slopes"
 
 # ╔═╡ 81653527-a1fb-49ab-99db-5fdda6b669fd
 md"""exploration radius, `e_radius = ` $(@bind e_radius NumberField(0:1000; default=3))"""
@@ -472,6 +496,7 @@ begin
 	    
 	    return collect(output_x), collect(output_y)
 	end
+	md"kernel and method to generate topography slopes using central differences"
 end
 
 # ╔═╡ 230af3ed-9267-497c-a697-e422bcf04665
@@ -483,8 +508,9 @@ end
 
 # ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
 begin
-	using DelimitedFiles
-	writedlm("slope.txt", slope)
+	using DelimitedFiles;
+	writedlm("slope.txt", slope);
+	md"Let's write the slopes into a txt file for debugging"
 end
 
 # ╔═╡ 46534c16-9fe3-4c2b-a10b-8093cbc03dc2
@@ -496,7 +522,6 @@ begin
 	y_coordinates = [el[2] for el in slope];
 	quiver(repeat(reshape(1:n, 1, n), n, 1), transpose(repeat(reshape(1:n, 1, n), n, 1)), quiver=( x_coordinates, y_coordinates))
 end
- 
   ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1882,7 +1907,7 @@ version = "1.4.1+1"
 # ╟─e5c741d7-7c52-4097-8d02-89d76495d53f
 # ╟─29fb1a62-86bf-4bab-bb7e-dbbfd5024917
 # ╠═7382f5ff-0c87-4d1d-b45f-80286353135f
-# ╠═fd3512a7-8d52-4d25-9ad8-0cc80555da7f
+# ╟─fd3512a7-8d52-4d25-9ad8-0cc80555da7f
 # ╠═2a3753d3-c08c-4e85-907e-9ebb5a67dab3
 # ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
 # ╠═8327cfec-51df-4c38-839a-b7212ddb24e7
@@ -1896,17 +1921,22 @@ version = "1.4.1+1"
 # ╠═4ec0a200-78df-4cfd-9efe-105dad6f4ef3
 # ╠═2be8edb3-16a6-4bb0-9a26-231a98230dbb
 # ╠═b32adad4-c88b-4c19-98d1-2eaa2454b1fe
+# ╟─fffa26a7-ecf6-4be0-ab7c-423665caf7a5
 # ╠═72a7cb99-5483-4c82-9554-007c2ba44413
 # ╠═cd4ee775-74d9-417f-9c97-6c8d321d7580
 # ╠═0f0779fa-d610-429f-acd3-ac82b7842b14
 # ╠═cb6482b5-c003-4ad2-8d8b-a60f3946b255
 # ╠═ba6660df-59b7-4c70-b30f-b8548d63b0d2
-# ╠═d41c1874-e39c-4b9f-b943-7d7543a1c402
 # ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
 # ╠═82d0e800-deb1-42fe-b1d3-2018d8639ff8
+# ╟─8f0937f0-813b-4256-a8b9-afb22e092a42
+# ╠═12351738-ddd3-4051-8880-504ecff343af
+# ╟─6d4076dc-68c8-42f8-a43e-222e3410bdbf
 # ╠═3750d105-df07-4af7-9143-82b065fbb041
 # ╠═1add5389-3a8b-40b7-b999-8df22bb45900
+# ╟─9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
 # ╠═2fff7da7-16ff-407d-92ef-24ee3469b9f4
+# ╟─08c8c238-8a24-4743-aed5-0e2649758b61
 # ╠═81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
 # ╠═15f17206-db9f-4896-9e32-93d025501917
