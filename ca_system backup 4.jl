@@ -196,6 +196,12 @@ function encode_agent(agent_pos, B)
 	return B_out
 end
 
+# ╔═╡ b32adad4-c88b-4c19-98d1-2eaa2454b1fe
+@bind t Slider(1:1:500, show_value=true)
+
+# ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
+Markdown.parse("``t=$(t)\\ \\text{ticks}``")
+
 # ╔═╡ fffa26a7-ecf6-4be0-ab7c-423665caf7a5
 md"## Topography"
 
@@ -479,137 +485,17 @@ begin
 	enem_z = [topo[row[1], row[2]] for row in eachrow(enem_pos)]
 	enem_r = rand(1:3, (n_enem,1));
 	enemies = hcat(enem_pos, enem_r);
-	md"Generating random enemy clusters. The look like so..."
+	md"Generating random enemy clusters..."
 end
 
 # ╔═╡ cb0bb5cd-a02b-457d-b47a-be623e8d50ed
 enemies
 
-# ╔═╡ 2351b2a4-c0d0-4769-ab1b-be778212bee9
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	Plots.default(overwrite_figure=false)
-	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
-	scatter!(enem_pos[:, 1], enem_pos[:, 2], enem_z, ratio=1, zlim=[0,L], color=:white, markersize=4, markerstrokecolor=:white, markerstrokewidth=0)
-	md"Let's just assume this is not here..."
-end
-  ╠═╡ =#
+# ╔═╡ 143f07b1-30a9-4a4f-ac8b-1a8efa3ff766
+enem_z
 
-# ╔═╡ 477ae165-07d6-4a64-8ce4-8c4b4c25011e
-begin
-	function neighbourhoods(radius, inc=0)
-		n = []
-		for r in 0:radius
-			for i in 0:r
-				if (inc!==0 || r !== 0)
-					if(i !== 0) 
-						push!(n, [-i, abs(r-i)], [i, abs(r-i)])
-						if (r-i !== 0) 
-							push!(n, [-i, -abs(r-i)], [i, -abs(r-i)])
-						end
-					else
-						push!(n, [i, abs(r-i)])					
-						if (r-i !== 0) 
-							push!(n, [i, -abs(r-i)])
-						end
-					end
-				end
-			end					
-		end
-		return n
-	end
-	md"Definition of neighbourhood function that returns a von neumann neighbourhood set"
-end
-
-# ╔═╡ 86078a29-e2a6-470b-8757-b2efe2bf9eb8
-md"Let's attempt to plot the enemies just like how we plotted bushes"
-
-# ╔═╡ feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
-begin
-
-	topo_bush_enemies = plot_topo_gpu(topo, A)
-	m, _ = size(enemies)
-	for e in 1:m
-		for n in neighbourhoods(enemies[e, 3], 1)
-			topo_bush_enemies[enemies[e, 1]+n[1], enemies[e, 2]+n[2]]+=2
-		end
-	end
-	plot(1:n, 1:n,topo_bush_enemies, st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
-end
-
-# ╔═╡ c0bc8f94-9636-461a-9b34-fe0ccfefcb69
-md"That doesn't look so great now, does it?
-
-Let's plot the agents along with the bushes in a more beautiful manner. Green represents bushes and white for enemies."
-
-# ╔═╡ a22d6084-18ed-4f71-886d-2ffc40ce599f
-begin
-	enemiesInA = zeros(n, n)
-	for e in 1:size(enemies)[1]
-		for n in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
-			enemiesInA[enemies[e, 1]+n[1], enemies[e, 2]+n[2]] = 1
-		end
-	end
-	
-	function color(i, j, alt_ps, A, enemiesInA)
-		z=0.0
-		m, _ = size(alt_ps)
-		norm = 0
-
-		if(A[j, i]!=0)
-			return -10
-		elseif (enemiesInA[j, i]!=0)
-			return max_height+10
-		end
-		for k in 1:m
-			d = ((alt_ps[k, 1] - i)^2 + (alt_ps[k, 2] - j)^2)^0.5
-			if (d > 0)
-				z += alt_ps[k, 3]/d^power
-				norm += 1/d^power
-			else
-				z = alt_ps[k, 3]
-				return z
-			end
-		end
-		z /= norm
-		# println(typeof(z))
-		return z
-	end
-
-	min_v = 10/(max_height+20)
-	max_v = (max_height+10)/(max_height+20)
-	custom_colorscale = [
-	    (0.00, "#3bff00"),  # Green
-	    (min_v - 0.000000001, "#3bff00"),  # Green
-	    (min_v, "#222224"),  # Blue
-	    (min_v + 1*(max_v-min_v)/5, "#3E2163"),  # Blue
-		(min_v + 2*(max_v-min_v)/5, "#88236A"),# Yellow
-		(min_v + 3*(max_v-min_v)/5, "#D04544"),# Yellow
-		(min_v + 4*(max_v-min_v)/5, "#F78D1E"),# Yellow
-		(max_v - 0.000000001, "#F1E760"),# Yellow
-	    (max_v, "#ffffff"),  # Blue
-	    (1.00, "#ffffff"),  # Blue
-	]
-
-	function colors_alias(x, y)
-		return color(x, y, alt_p, A, enemiesInA)
-	end
-	
-	x = 1:n
-	y = 1:n
-	
-	surface(x = x, y = y, plot_topo_gpu(topo, A), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlabel="X", ylabel="Y", zlabel="Z")
-end
-
-# ╔═╡ b32adad4-c88b-4c19-98d1-2eaa2454b1fe
-md"Clock $(@bind t Clock())"
-
-# ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
-Markdown.parse("``t=$(t)\\ \\text{ticks}``")
-
-# ╔═╡ da7f5ffb-e34a-46d0-9f88-6bfbca71dcdd
-
+# ╔═╡ 150fcba2-2273-4fc3-82ca-01001af84add
+[topo[44, 39], topo[44, 74], topo[24, 10]]
 
 # ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
 begin
@@ -621,6 +507,14 @@ begin
 		end
 	end
 	random_climb(enemies)
+end
+
+# ╔═╡ 2351b2a4-c0d0-4769-ab1b-be778212bee9
+begin
+	Plots.default(overwrite_figure=false)
+	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
+	scatter!(enem_pos[:, 1], enem_pos[:, 2], enem_z, ratio=1, zlim=[0,L], color=:white, markersize=4, markerstrokecolor=:white, markerstrokewidth=0)
+	
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2009,11 +1903,13 @@ version = "1.4.1+1"
 # ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
 # ╠═8327cfec-51df-4c38-839a-b7212ddb24e7
 # ╟─701891a4-6a87-427e-af9b-487dec1dee4d
+# ╠═29fd69aa-1b99-4047-89a3-62b89c631062
 # ╟─0f344406-4816-4cd6-ae8e-83a8b918fa11
 # ╟─4ec0a200-78df-4cfd-9efe-105dad6f4ef3
+# ╠═b32adad4-c88b-4c19-98d1-2eaa2454b1fe
 # ╟─fffa26a7-ecf6-4be0-ab7c-423665caf7a5
 # ╟─72a7cb99-5483-4c82-9554-007c2ba44413
-# ╠═cd4ee775-74d9-417f-9c97-6c8d321d7580
+# ╟─cd4ee775-74d9-417f-9c97-6c8d321d7580
 # ╟─0f0779fa-d610-429f-acd3-ac82b7842b14
 # ╟─b1538261-175d-4892-ab3d-2963f239b8df
 # ╟─ba6660df-59b7-4c70-b30f-b8548d63b0d2
@@ -2027,7 +1923,7 @@ version = "1.4.1+1"
 # ╟─11f7bf70-4a39-451c-9bdb-9369742dcce0
 # ╟─cb6482b5-c003-4ad2-8d8b-a60f3946b255
 # ╟─9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
-# ╠═2fff7da7-16ff-407d-92ef-24ee3469b9f4
+# ╟─2fff7da7-16ff-407d-92ef-24ee3469b9f4
 # ╟─08c8c238-8a24-4743-aed5-0e2649758b61
 # ╟─81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
@@ -2038,16 +1934,11 @@ version = "1.4.1+1"
 # ╟─daf19ff1-0012-4b12-b61f-1d9517178bf5
 # ╟─5b8de4a5-f6d7-407a-8709-4e0d392e21b9
 # ╟─e9055da6-3c24-4fe9-919c-1040916c79c3
-# ╟─be20aaf3-473e-4be5-adcc-3db9eb3de213
-# ╟─cb0bb5cd-a02b-457d-b47a-be623e8d50ed
-# ╟─2351b2a4-c0d0-4769-ab1b-be778212bee9
-# ╟─477ae165-07d6-4a64-8ce4-8c4b4c25011e
-# ╟─86078a29-e2a6-470b-8757-b2efe2bf9eb8
-# ╠═feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
-# ╟─c0bc8f94-9636-461a-9b34-fe0ccfefcb69
-# ╠═a22d6084-18ed-4f71-886d-2ffc40ce599f
-# ╟─b32adad4-c88b-4c19-98d1-2eaa2454b1fe
-# ╠═da7f5ffb-e34a-46d0-9f88-6bfbca71dcdd
+# ╠═be20aaf3-473e-4be5-adcc-3db9eb3de213
+# ╠═cb0bb5cd-a02b-457d-b47a-be623e8d50ed
+# ╠═143f07b1-30a9-4a4f-ac8b-1a8efa3ff766
+# ╠═150fcba2-2273-4fc3-82ca-01001af84add
 # ╠═fa304120-14f9-4c1a-a430-0438db6743f3
+# ╠═2351b2a4-c0d0-4769-ab1b-be778212bee9
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -28,20 +28,22 @@ begin
 	using CUDA
 	CUDA.allowscalar(false)
 	using Random
-	md"Just Importing libraries here..."
 end
 
 # ╔═╡ 4727903f-a54b-4d73-8998-fa99bb2481aa
-md"# CA for Topography and Enemies"
+md"# _Cellular Automata for Topography and Enemies_"
+
+# ╔═╡ 7c345a38-6f6c-4ede-a46b-c2942c771eba
+md"Just Importing libraries here..."
 
 # ╔═╡ c8c9a170-7cc7-4bb3-b9dc-1654f4c2cefd
-begin
-	# code to display a 2D array as an image
-	function show_image(A, color_range=:viridis)
-		heatmap(1:size(A, 1), 1:size(A, 2), A, aspect_ratio=:equal, color=color_range, backend=:gr)
-	end
-	md"Defining show_image() that can plot the 2D version of our model." 
+# code to display a 2D array as an image
+function show_image(A, color_range=:viridis)
+	heatmap(1:size(A, 1), 1:size(A, 2), A, aspect_ratio=:equal, color=color_range)
 end
+
+# ╔═╡ 11f7bf70-4a39-451c-9bdb-9369742dcce0
+md"Random Seed, $(@bind seed Slider(0:1000, default=809, show_value=true))"
 
 # ╔═╡ df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 md"## Initial State"
@@ -147,8 +149,30 @@ end
 # ╔═╡ 8327cfec-51df-4c38-839a-b7212ddb24e7
 md"``X_{\max}, Y_{\max}``, L = $(@bind L NumberField(0:100; default=100))"
 
+# ╔═╡ 4167489e-715b-4e62-8e56-3f2cd1317ccd
+begin
+	Random.seed!(seed)
+	# sample code for a 2D array
+	A_L = rand(Float64, L, L) .< 0.03
+	A = zeros(n, n)
+
+	for i in 1:n
+		for j in 1:n
+			A[i, j] = A_L[Int(ceil(i/(n/L))), Int(ceil(j/(n/L)))]
+		end
+	end
+	
+	
+	# use show_image to display the array A
+	show_image(A)
+	# show_image(A, [(0,0,0), (1,1,1)])
+end
+
 # ╔═╡ 701891a4-6a87-427e-af9b-487dec1dee4d
 md"Time of simulation, ``T_{\text{max}}``"
+
+# ╔═╡ 29fd69aa-1b99-4047-89a3-62b89c631062
+md"## (Legacy) Agents in our CA model"
 
 # ╔═╡ 0f344406-4816-4cd6-ae8e-83a8b918fa11
 function next_pos(current_pos, B, seed)
@@ -196,14 +220,32 @@ function encode_agent(agent_pos, B)
 	return B_out
 end
 
+# ╔═╡ b32adad4-c88b-4c19-98d1-2eaa2454b1fe
+@bind t Slider(1:1:500, show_value=true)
+
+# ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
+Markdown.parse("``t=$(t)\\ \\text{ticks}``")
+
 # ╔═╡ fffa26a7-ecf6-4be0-ab7c-423665caf7a5
-md"## Topography"
+md"# Topography"
 
 # ╔═╡ 72a7cb99-5483-4c82-9554-007c2ba44413
 md"Number of height points, $(@bind altPs NumberField(0:100; default=7))"
 
 # ╔═╡ cd4ee775-74d9-417f-9c97-6c8d321d7580
 md"Max height, $(@bind max_height NumberField(0:100; default=L/10))"
+
+# ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
+begin
+	Random.seed!(seed)
+	alt_pos = rand(1:n, (altPs,2));
+	alt_h = rand(Float64, (altPs,1))*max_height;
+	hcat(alt_pos, alt_h)
+	alt_p = hcat(alt_pos, alt_h);
+end
+
+# ╔═╡ cb6482b5-c003-4ad2-8d8b-a60f3946b255
+@bind power NumberField(0:1000; default=3)
 
 # ╔═╡ ba6660df-59b7-4c70-b30f-b8548d63b0d2
 begin
@@ -214,7 +256,7 @@ begin
 			B[i, j] = 0
 			norm = 0
 			for ki in 1:k
-				d = ((alt_p[ki, 2] - i)^2 + (alt_p[ki, 1] - j)^2)^0.5
+				d = ((alt_p[ki, 1] - i)^2 + (alt_p[ki, 2] - j)^2)^0.5
 				if (d > 0)
 					B[i,j] += alt_p[ki, 3]/d^power
 					norm += 1/d^power
@@ -246,14 +288,35 @@ begin
 	md"Kernel and Method to generate Topography"
 end
 
+# ╔═╡ 8532f267-7e5f-45bb-8d82-6f86cfff7cc4
+begin
+	topo = zeros(Float64, n, n);
+	topo = topography_gpu(topo, alt_p, power)
+	md"Let's define the topography using the control points"
+	# plotly()
+	# show_image(topo, :grays)
+end
+
 # ╔═╡ 82d0e800-deb1-42fe-b1d3-2018d8639ff8
 md"neighbourhood radius, `n_radius` $(@bind n_radius NumberField(0:1000; default=3))"
 
 # ╔═╡ 8f0937f0-813b-4256-a8b9-afb22e092a42
 md"Topography of the system"
 
+# ╔═╡ 12351738-ddd3-4051-8880-504ecff343af
+begin
+	plotly()
+	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L])
+end
+
 # ╔═╡ 6d4076dc-68c8-42f8-a43e-222e3410bdbf
 md"Topography contour"
+
+# ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
+begin
+	plotly()
+	contour(1:n, 1:n,topo, levels=60, fill=true)
+end
 
 # ╔═╡ 1add5389-3a8b-40b7-b999-8df22bb45900
 begin
@@ -280,75 +343,15 @@ begin
 	    
 	    return collect(output)
 	end
-	md"Kernel and GPU handler for superposing bushes onto the topography"
-end
-
-# ╔═╡ 11f7bf70-4a39-451c-9bdb-9369742dcce0
-md"Random Seed, $(@bind seed NumberField(0:1000, default=809))"
-
-# ╔═╡ 4167489e-715b-4e62-8e56-3f2cd1317ccd
-begin
-	Random.seed!(seed)
-	# sample code for a 2D array
-	A_L = rand(Float64, L, L) .< 0.03
-	A = zeros(n, n)
-
-	for i in 1:n
-		for j in 1:n
-			A[i, j] = A_L[Int(ceil(i/(n/L))), Int(ceil(j/(n/L)))]
-		end
-	end
-	
-	
-	# use show_image to display the array A
-	show_image(A)
-	# show_image(A, [(0,0,0), (1,1,1)])
-end
-
-# ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
-begin
-	Random.seed!(seed)
-	alt_pos = rand(1:n, (altPs,2));
-	alt_h = rand(Float64, (altPs,1))*max_height;
-	hcat(alt_pos, alt_h)
-	alt_p = hcat(alt_pos, alt_h);
-	md"Generating random control points..."
-end
-
-# ╔═╡ b1538261-175d-4892-ab3d-2963f239b8df
-alt_p
-
-# ╔═╡ cb6482b5-c003-4ad2-8d8b-a60f3946b255
-md"Power to raise the distance to control point... $(@bind power NumberField(0:1000; default=3))"
-
-# ╔═╡ 8532f267-7e5f-45bb-8d82-6f86cfff7cc4
-begin
-	topo = zeros(Float64, n, n);
-	topo = topography_gpu(topo, alt_p, power)
-	md"Let's define the topography using the control points"
-	# plotly()
-	# show_image(topo, :grays)
-end
-
-# ╔═╡ 12351738-ddd3-4051-8880-504ecff343af
-begin
-	plotly()
-	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
-end
-
-# ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
-begin
-	plotly()
-	contour(1:n, 1:n,topo, levels=60, fill=true)
 end
 
 # ╔═╡ 9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
-md"Topography superposed with vegetation looks like this"
+md"Topography with vegetation"
 
 # ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
 begin
 	plotly()
-	surface_plot = plot(1:n, 1:n,plot_topo_gpu(topo, A), st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
+	surface_plot = plot(1:n, 1:n,plot_topo_gpu(topo, A), st=:surface, ratio=1, zlim=[0,L])
 end
 
 # ╔═╡ 08c8c238-8a24-4743-aed5-0e2649758b61
@@ -436,7 +439,7 @@ begin
 	    
 	    return collect(output_x), collect(output_y)
 	end
-	md"Kernel and method to generate topography slopes using central differences"
+	md"kernel and method to generate topography slopes using central differences"
 end
 
 # ╔═╡ 230af3ed-9267-497c-a697-e422bcf04665
@@ -444,7 +447,6 @@ begin
 	dx, dy = slope_gpu(topo);
 	
 	slope = [(dx[i, j], dy[i, j]) for i in 1:n, j in 1:n];
-	md"Calculating the slope with a double central difference method"
 end
 
 # ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
@@ -452,175 +454,6 @@ begin
 	using DelimitedFiles;
 	writedlm("slope.txt", slope);
 	md"Let's write the slopes into a txt file for debugging"
-end
-
-# ╔═╡ 73014c35-ab99-47e2-bfcb-9076c0720bdf
-md"## Hill Climb... racing?"
-
-# ╔═╡ daf19ff1-0012-4b12-b61f-1d9517178bf5
-md"Let's first see how we can make our model realistically traverse the topography.
-
-Since it's unlikely that a troop can climb any slope, we will try to make them move in the direction with the max feasible slope.
-
-Let's deal with the following question: Should they do a random walk or should there be an \"ulterior\" motive? Time to explore!
-
-What will a random walk look like?"
-
-# ╔═╡ 5b8de4a5-f6d7-407a-8709-4e0d392e21b9
-md"Set climbable slope to... $(@bind max_slope NumberField(1:10, default=7))%"
-
-# ╔═╡ e9055da6-3c24-4fe9-919c-1040916c79c3
-md"Let there be... $(@bind n_enem NumberField(1:10, default=3)) enemy clusters"
-
-# ╔═╡ be20aaf3-473e-4be5-adcc-3db9eb3de213
-begin
-	Random.seed!(seed)
-	enem_pos = rand(1:n, (n_enem,2));
-	enem_z = [topo[row[1], row[2]] for row in eachrow(enem_pos)]
-	enem_r = rand(1:3, (n_enem,1));
-	enemies = hcat(enem_pos, enem_r);
-	md"Generating random enemy clusters. The look like so..."
-end
-
-# ╔═╡ cb0bb5cd-a02b-457d-b47a-be623e8d50ed
-enemies
-
-# ╔═╡ 2351b2a4-c0d0-4769-ab1b-be778212bee9
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	Plots.default(overwrite_figure=false)
-	plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
-	scatter!(enem_pos[:, 1], enem_pos[:, 2], enem_z, ratio=1, zlim=[0,L], color=:white, markersize=4, markerstrokecolor=:white, markerstrokewidth=0)
-	md"Let's just assume this is not here..."
-end
-  ╠═╡ =#
-
-# ╔═╡ 477ae165-07d6-4a64-8ce4-8c4b4c25011e
-begin
-	function neighbourhoods(radius, inc=0)
-		n = []
-		for r in 0:radius
-			for i in 0:r
-				if (inc!==0 || r !== 0)
-					if(i !== 0) 
-						push!(n, [-i, abs(r-i)], [i, abs(r-i)])
-						if (r-i !== 0) 
-							push!(n, [-i, -abs(r-i)], [i, -abs(r-i)])
-						end
-					else
-						push!(n, [i, abs(r-i)])					
-						if (r-i !== 0) 
-							push!(n, [i, -abs(r-i)])
-						end
-					end
-				end
-			end					
-		end
-		return n
-	end
-	md"Definition of neighbourhood function that returns a von neumann neighbourhood set"
-end
-
-# ╔═╡ 86078a29-e2a6-470b-8757-b2efe2bf9eb8
-md"Let's attempt to plot the enemies just like how we plotted bushes"
-
-# ╔═╡ feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
-begin
-
-	topo_bush_enemies = plot_topo_gpu(topo, A)
-	m, _ = size(enemies)
-	for e in 1:m
-		for n in neighbourhoods(enemies[e, 3], 1)
-			topo_bush_enemies[enemies[e, 1]+n[1], enemies[e, 2]+n[2]]+=2
-		end
-	end
-	plot(1:n, 1:n,topo_bush_enemies, st=:surface, ratio=1, zlim=[0,L],xlabel="X", ylabel="Y", zlabel="Z")
-end
-
-# ╔═╡ c0bc8f94-9636-461a-9b34-fe0ccfefcb69
-md"That doesn't look so great now, does it?
-
-Let's plot the agents along with the bushes in a more beautiful manner. Green represents bushes and white for enemies."
-
-# ╔═╡ a22d6084-18ed-4f71-886d-2ffc40ce599f
-begin
-	enemiesInA = zeros(n, n)
-	for e in 1:size(enemies)[1]
-		for n in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
-			enemiesInA[enemies[e, 1]+n[1], enemies[e, 2]+n[2]] = 1
-		end
-	end
-	
-	function color(i, j, alt_ps, A, enemiesInA)
-		z=0.0
-		m, _ = size(alt_ps)
-		norm = 0
-
-		if(A[j, i]!=0)
-			return -10
-		elseif (enemiesInA[j, i]!=0)
-			return max_height+10
-		end
-		for k in 1:m
-			d = ((alt_ps[k, 1] - i)^2 + (alt_ps[k, 2] - j)^2)^0.5
-			if (d > 0)
-				z += alt_ps[k, 3]/d^power
-				norm += 1/d^power
-			else
-				z = alt_ps[k, 3]
-				return z
-			end
-		end
-		z /= norm
-		# println(typeof(z))
-		return z
-	end
-
-	min_v = 10/(max_height+20)
-	max_v = (max_height+10)/(max_height+20)
-	custom_colorscale = [
-	    (0.00, "#3bff00"),  # Green
-	    (min_v - 0.000000001, "#3bff00"),  # Green
-	    (min_v, "#222224"),  # Blue
-	    (min_v + 1*(max_v-min_v)/5, "#3E2163"),  # Blue
-		(min_v + 2*(max_v-min_v)/5, "#88236A"),# Yellow
-		(min_v + 3*(max_v-min_v)/5, "#D04544"),# Yellow
-		(min_v + 4*(max_v-min_v)/5, "#F78D1E"),# Yellow
-		(max_v - 0.000000001, "#F1E760"),# Yellow
-	    (max_v, "#ffffff"),  # Blue
-	    (1.00, "#ffffff"),  # Blue
-	]
-
-	function colors_alias(x, y)
-		return color(x, y, alt_p, A, enemiesInA)
-	end
-	
-	x = 1:n
-	y = 1:n
-	
-	surface(x = x, y = y, plot_topo_gpu(topo, A), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlabel="X", ylabel="Y", zlabel="Z")
-end
-
-# ╔═╡ b32adad4-c88b-4c19-98d1-2eaa2454b1fe
-md"Clock $(@bind t Clock())"
-
-# ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
-Markdown.parse("``t=$(t)\\ \\text{ticks}``")
-
-# ╔═╡ da7f5ffb-e34a-46d0-9f88-6bfbca71dcdd
-
-
-# ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
-begin
-	function random_climb(enemies)
-		m, _ = size(enemies)
-		for e in 1:m
-			i, j = enemies[e, [1,2]]
-			println(slope[i, j])
-		end
-	end
-	random_climb(enemies)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1997,57 +1830,50 @@ version = "1.4.1+1"
 
 # ╔═╡ Cell order:
 # ╠═4727903f-a54b-4d73-8998-fa99bb2481aa
-# ╟─9083379c-842e-4f7c-936f-1f9e66861af0
+# ╟─7c345a38-6f6c-4ede-a46b-c2942c771eba
+# ╠═9083379c-842e-4f7c-936f-1f9e66861af0
 # ╠═c8c9a170-7cc7-4bb3-b9dc-1654f4c2cefd
+# ╠═11f7bf70-4a39-451c-9bdb-9369742dcce0
 # ╟─df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 # ╠═4167489e-715b-4e62-8e56-3f2cd1317ccd
 # ╟─e5c741d7-7c52-4097-8d02-89d76495d53f
 # ╟─29fb1a62-86bf-4bab-bb7e-dbbfd5024917
 # ╠═7382f5ff-0c87-4d1d-b45f-80286353135f
 # ╟─fd3512a7-8d52-4d25-9ad8-0cc80555da7f
-# ╟─2a3753d3-c08c-4e85-907e-9ebb5a67dab3
+# ╠═2a3753d3-c08c-4e85-907e-9ebb5a67dab3
 # ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
 # ╠═8327cfec-51df-4c38-839a-b7212ddb24e7
 # ╟─701891a4-6a87-427e-af9b-487dec1dee4d
-# ╟─0f344406-4816-4cd6-ae8e-83a8b918fa11
-# ╟─4ec0a200-78df-4cfd-9efe-105dad6f4ef3
+# ╠═7e042a99-c645-4af4-aa6f-6fc6ae0b3177
+# ╠═4604ca83-88f8-4cd1-b614-c327de23f32f
+# ╟─de781192-2d09-45c9-9a8b-c18bf0431a45
+# ╠═7acb0fc3-cbe6-4723-b1cb-381071ac76a8
+# ╟─29fd69aa-1b99-4047-89a3-62b89c631062
+# ╠═0f344406-4816-4cd6-ae8e-83a8b918fa11
+# ╠═4ec0a200-78df-4cfd-9efe-105dad6f4ef3
+# ╠═2be8edb3-16a6-4bb0-9a26-231a98230dbb
+# ╠═b32adad4-c88b-4c19-98d1-2eaa2454b1fe
 # ╟─fffa26a7-ecf6-4be0-ab7c-423665caf7a5
-# ╟─72a7cb99-5483-4c82-9554-007c2ba44413
+# ╠═72a7cb99-5483-4c82-9554-007c2ba44413
 # ╠═cd4ee775-74d9-417f-9c97-6c8d321d7580
-# ╟─0f0779fa-d610-429f-acd3-ac82b7842b14
-# ╟─b1538261-175d-4892-ab3d-2963f239b8df
-# ╟─ba6660df-59b7-4c70-b30f-b8548d63b0d2
+# ╠═0f0779fa-d610-429f-acd3-ac82b7842b14
+# ╠═cb6482b5-c003-4ad2-8d8b-a60f3946b255
+# ╠═ba6660df-59b7-4c70-b30f-b8548d63b0d2
 # ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
-# ╟─82d0e800-deb1-42fe-b1d3-2018d8639ff8
+# ╠═82d0e800-deb1-42fe-b1d3-2018d8639ff8
 # ╟─8f0937f0-813b-4256-a8b9-afb22e092a42
-# ╟─12351738-ddd3-4051-8880-504ecff343af
+# ╠═12351738-ddd3-4051-8880-504ecff343af
 # ╟─6d4076dc-68c8-42f8-a43e-222e3410bdbf
-# ╟─3750d105-df07-4af7-9143-82b065fbb041
-# ╟─1add5389-3a8b-40b7-b999-8df22bb45900
-# ╟─11f7bf70-4a39-451c-9bdb-9369742dcce0
-# ╟─cb6482b5-c003-4ad2-8d8b-a60f3946b255
+# ╠═3750d105-df07-4af7-9143-82b065fbb041
+# ╠═1add5389-3a8b-40b7-b999-8df22bb45900
 # ╟─9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
 # ╠═2fff7da7-16ff-407d-92ef-24ee3469b9f4
 # ╟─08c8c238-8a24-4743-aed5-0e2649758b61
-# ╟─81653527-a1fb-49ab-99db-5fdda6b669fd
+# ╠═81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
-# ╟─15f17206-db9f-4896-9e32-93d025501917
+# ╠═15f17206-db9f-4896-9e32-93d025501917
 # ╠═230af3ed-9267-497c-a697-e422bcf04665
-# ╟─c2a9fa1f-a405-4767-aec2-42196a70cc61
-# ╟─73014c35-ab99-47e2-bfcb-9076c0720bdf
-# ╟─daf19ff1-0012-4b12-b61f-1d9517178bf5
-# ╟─5b8de4a5-f6d7-407a-8709-4e0d392e21b9
-# ╟─e9055da6-3c24-4fe9-919c-1040916c79c3
-# ╟─be20aaf3-473e-4be5-adcc-3db9eb3de213
-# ╟─cb0bb5cd-a02b-457d-b47a-be623e8d50ed
-# ╟─2351b2a4-c0d0-4769-ab1b-be778212bee9
-# ╟─477ae165-07d6-4a64-8ce4-8c4b4c25011e
-# ╟─86078a29-e2a6-470b-8757-b2efe2bf9eb8
-# ╠═feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
-# ╟─c0bc8f94-9636-461a-9b34-fe0ccfefcb69
-# ╠═a22d6084-18ed-4f71-886d-2ffc40ce599f
-# ╟─b32adad4-c88b-4c19-98d1-2eaa2454b1fe
-# ╠═da7f5ffb-e34a-46d0-9f88-6bfbca71dcdd
-# ╠═fa304120-14f9-4c1a-a430-0438db6743f3
+# ╠═46534c16-9fe3-4c2b-a10b-8093cbc03dc2
+# ╠═c2a9fa1f-a405-4767-aec2-42196a70cc61
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
