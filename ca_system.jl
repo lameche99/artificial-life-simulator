@@ -679,12 +679,15 @@ end
 	Plots.contour(1:n, 1:n,topo, levels=60, xlim=[0,n], ylim=[0,n], ratio=1, fill=true)
 
 # ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
+#=╠═╡
 Markdown.parse("``t=$(t)\\ \\text{ticks}``")
+  ╠═╡ =#
 
 # ╔═╡ a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
 md"Let's follow a \"gradient ascend\" method where the clusters just follow the direction with maximum ascend in hopes of reaching the peak."
 
 # ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
+#=╠═╡
 begin
 	function gradient_ascend(enemies, t)
 		enemiesAtT = copy(enemies)
@@ -693,10 +696,10 @@ begin
 		for ti in 1:t
 			for e in 1:enemiesAtT_m
 				i, j = enemiesAtT[e, [1,2]]
-				slopeHere = slope[i, j]
+				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
 				r = enemiesAtT[e, 3]
-				dx = -ceil(slopeHere[1] * n/L)
-				dy = -ceil(slopeHere[2] * n/L)
+				dx = ceil(slopeHere[1] * n/L)
+				dy = ceil(slopeHere[2] * n/L)
 				enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
 				enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
 			end
@@ -709,7 +712,10 @@ begin
 			x = 1:n
 			y = 1:n
 			
-			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=plot_topo_gpu(topo, A), colorscale=custom_colorscale, surfacecolor = color_gpu(alt_p, A, enemiesInA, max_height, power), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(plot_topo_gpu(topo, A)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+		end
+		for e in 1:enemiesAtT_m
+			println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
 		end
 		return surfacePlot
 	end
@@ -722,23 +728,20 @@ begin
 	        zaxis = attr(range=[0, L]),
 			
 	        camera = attr(
-	            eye = attr(x=0, y=0, z=-2),  # Set the camera position
+	            eye = attr(x=0, y=0, z=1),  # Set the camera position
 	            center = attr(x=0, y=0, z=0),  # Set the center point to look at
-    			up=attr(x=1, y=0., z=0),
+    			up=attr(x=0, y=1, z=0),
 	        )
 		)
 	)
-
-	# camera = attr(
-	#     eye=attr(x=2.5, y=0., z=0.)
-	# )
-
-	# relayout!(surfacePlot, scene_camera=camera)
 	PlutoPlotly.plot(surfacePlot, layout)
 end
+  ╠═╡ =#
 
 # ╔═╡ 67af10fc-c749-4042-be11-983f648f52ce
+#=╠═╡
 surfacePlot.layout[:scene]
+  ╠═╡ =#
 
 # ╔═╡ fc5a9a4d-93bb-44de-8afa-99cfb6eac9e9
 # ╠═╡ disabled = true
@@ -776,7 +779,9 @@ end
   ╠═╡ =#
 
 # ╔═╡ 282cd2e0-8b45-4625-af65-49f2167b1dc4
+#=╠═╡
 md"Clock $(@bind t Slider(1:100, show_value=true))"
+  ╠═╡ =#
 
 # ╔═╡ 47eb3e53-a8b5-47a8-bfcd-9ad51bffbdc0
 # ╠═╡ disabled = true
@@ -2270,7 +2275,7 @@ version = "1.4.1+1"
 # ╟─08c8c238-8a24-4743-aed5-0e2649758b61
 # ╟─81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
-# ╟─15f17206-db9f-4896-9e32-93d025501917
+# ╠═15f17206-db9f-4896-9e32-93d025501917
 # ╠═230af3ed-9267-497c-a697-e422bcf04665
 # ╟─c2a9fa1f-a405-4767-aec2-42196a70cc61
 # ╟─73014c35-ab99-47e2-bfcb-9076c0720bdf
