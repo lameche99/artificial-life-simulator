@@ -16,6 +16,8 @@ class Agent:
         self.gather = gather_sight
         self.env_len = environment_len
         self.discovered_enemy = None
+        self.enemies_seen = list()
+        self.bushes = list()
         self.surr_field = None
 
     def random_search(self):
@@ -40,17 +42,37 @@ class Agent:
 
     def find_bushes(self):
         # Can be used to make a list of bushes using the information from self.surr_field
-        pass
+        # assume self.surr_field is 2D grid slice of environment surrounding the agent
+        bushes = list()
+        for i in len(self.surr_field[0]):
+            for j in len(self.surr_field[0][0]):
+                if (self.x == i) and (self.y == j):
+                    continue
+                if self.surr_field[i][j] == 'bush': # change with bush label in environment
+                    bushes.append((i, j))
+        self.bushes = bushes
 
     def find_enemy(self):
         # Can be used to make a list of nearby enemy cell
         # identify enemy ids also distinguish between new enemy and already analyzed enemy
-        # return value will be different for different cases
-        pass
+        # return a list of nested tuples or empty list if there are no enemies
+        # update enemies_seen list to keep track of them
+        # if new enemy is found update discovered_enemy
+        for i in len(self.surr_field[0]):
+            for j in len(self.surr_field[0][0]):
+                if (self.x == i) and (self.y == j):
+                    continue
+                if self.surr_field[i][j] == 'enemy': # change with enemy label in environment
+                    if (i,j) not in self.enemies_seen:
+                        self.discovered_enemy = (i,j) # set new discovered enemy for strategic search
+                        self.enemies_seen.append((i,j)) # mark as seen
+                    else:
+                        self.discovered_enemy = (i,j) # set discovered enemy already seen
 
     def scan_surrounding(self):
         # Implement function to get surrounging information from the Environemt Class for bushes and enemies present
-        pass
+        self.find_bushes()
+        self.find_enemy()
 
 
 class SearchModel:
@@ -79,9 +101,15 @@ class SearchModel:
 
             agent.scan_surrounding()
 
-            if agent.discovered_enemy:
-                # Implement avoid_enemy_search when an enemy is detected
-                new_position = agent.strategic_search(agent.discovered_enemy.x, agent.discovered_enemy.y)
+            if agent.discovered_enemy: 
+                # need to handle case if there are multiple enemies in the agent's field of vision
+                if agent.discovered_enemy in agent.enemies_seen:
+                    # still do random search if enemy has already been seen?
+                    # maybe just strategic search again
+                    new_position = agent.random_search()
+                else:
+                    # Implement avoid_enemy_search when a new enemy is detected
+                    new_position = agent.strategic_search(agent.discovered_enemy[0], agent.discovered_enemy[1])
             else:
                 # Implement random_search when no enemy is detected
                 new_position = agent.random_search()
