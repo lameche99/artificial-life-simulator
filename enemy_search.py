@@ -20,11 +20,16 @@ class Agent:
         self.bushes = list()
         self.surr_field = None
 
-    def random_search(self):
+    def random_search(self): # movement of the agents
+        # eight possible moves are there
         possible_moves = [
-            (self.x + 1, self.y),
-            (self.x - 1, self.y),
-            (self.x, self.y + 1),
+            (self.x + 1, self.y) # movement to the right
+            (self.x + 1, self.y + 1)
+            (self.x + 1, self.y - 1)
+            (self.x - 1, self.y) # movement to the left
+            (self.x - 1, self.y + 1)
+            (self.x - 1, self.y - 1)
+            (self.x, self.y + 1) # movement in y-direction only
             (self.x, self.y - 1)
         ]
 
