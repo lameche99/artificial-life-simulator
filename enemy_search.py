@@ -71,6 +71,8 @@ class Agent:
         # Implement function to get surrounging information from the Environemt Class for bushes and enemies present
         self.find_bushes()
         self.find_enemy()
+        # need to set self.surr_field as a slice of the total environment
+        # centered around current cell
 
 
 class SearchModel:
