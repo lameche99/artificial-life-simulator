@@ -42,7 +42,7 @@ class Agent:
         # Can be used to make a list of bushes using the information from self.surr_field
         pass
 
-    def find_bushes(self):
+    def find_enemy(self):
         # Can be used to make a list of nearby enemy cell
         # identify enemy ids also distinguish between new enemy and already analyzed enemy
         # return value will be different for different cases
