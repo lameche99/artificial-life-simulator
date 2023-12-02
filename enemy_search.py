@@ -11,6 +11,7 @@ class Agent:
         self.y = y                        # new position
         self.prevx = -1                   # one step previous position
         self.prevy = -1
+        self.pattern_index = 0
         self.agent_type = agent_type
         self.view = view_sight
         self.gather = gather_sight
@@ -20,18 +21,54 @@ class Agent:
         self.bushes = list()
         self.surr_field = None
 
-    def random_search(self):
+    def deterministic_search(self): # "deterministic" movement of the agents 
+        # eight possible moves are there
         possible_moves = [
-            (self.x + 1, self.y),
-            (self.x - 1, self.y),
-            (self.x, self.y + 1),
+            (self.x + 1, self.y) # movement to the right
+            (self.x + 1, self.y + 1)
+            (self.x + 1, self.y - 1)
+            (self.x - 1, self.y) # movement to the left
+            (self.x - 1, self.y + 1)
+            (self.x - 1, self.y - 1)
+            (self.x, self.y + 1) # movement in y-direction only
+            (self.x, self.y - 1)
+        ]
+
+        # Filter out moves that go outside the environment boundaries
+        valid_moves = [
+            (x, y) for x, y in possible_moves[self.pattern_index] if 0 <= x < self.env_len and 0 <= y < self.env_len
+        ]
+
+        # Filter out moves that correspond to bushes (since bushes are not in enemy camps)
+        valid_moves = [move for move in valid_moves if move not in self.bushes]
+
+        # Update the pattern index for the next move
+        self.pattern_index = (self.pattern_index + 1) % len(possible_moves)
+
+        # Return the first valid move if any, otherwise stay in the current position
+        return valid_moves[0] if valid_moves else (self.x, self.y)
+
+    def random_search(self): # "stochastic" movement of the agents 
+        # eight possible moves are there
+        possible_moves = [
+            (self.x + 1, self.y) # movement to the right
+            (self.x + 1, self.y + 1)
+            (self.x + 1, self.y - 1)
+            (self.x - 1, self.y) # movement to the left
+            (self.x - 1, self.y + 1)
+            (self.x - 1, self.y - 1)
+            (self.x, self.y + 1) # movement in y-direction only
             (self.x, self.y - 1)
         ]
 
         # Filter out moves that go outside the environment boundaries
         valid_moves = [(x, y) for x, y in possible_moves if 0 <= x < self.env_len and 0 <= y < self.env_len]
 
+        # Filter out moves that correspond to bushes (since bushes are not in enemy-camps)
+        valid_moves = [move for move in valid_moves if move not in self.bushes]
+
         return random.choice(valid_moves) if valid_moves else (self.x, self.y)
+
 
     def strategic_search(self, enemy_x, enemy_y):
         # Implement a search function when the enemy is detected
