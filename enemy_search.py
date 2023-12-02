@@ -15,8 +15,8 @@ class Agent:
         self.view = view_sight
         self.gather = gather_sight
         self.env_len = environment_len
-        self.discovered_enemy = list()
-        self.enemies_seen = list()
+        self.discovered_enemy = list()    # for newly discovered enemies
+        self.enemies_seen = list()        # for already analized enemies
         self.bushes = list()
         self.surr_field = None
 
@@ -49,33 +49,33 @@ class Agent:
         # Can be used to make a list of bushes using the information from self.surr_field
         # assume self.surr_field is 2D grid slice of environment surrounding the agent
         bushes = list()
-        for i in len(self.surr_field[0]):
-            for j in len(self.surr_field[0][0]):
+        for i in len(self.surr_field):
+            for j in len(self.surr_field[0]):
                 if (self.x == i) and (self.y == j):
                     continue
                 if self.surr_field[i][j] == 'bush': # change with bush label in environment
                     bushes.append((i, j))
         self.bushes = bushes
 
-    def find_enemy(self):
+    def find_enemy(self, seen_enemies):
         # Can be used to make a list of nearby enemy cell
         # identify enemy ids also distinguish between new enemy and already analyzed enemy
         # return a list of nested tuples or empty list if there are no enemies
         # update enemies_seen list to keep track of them
         # if new enemy is found update discovered_enemy
-        for i in len(self.surr_field[0]):
-            for j in len(self.surr_field[0][0]):
+        for i in len(self.surr_field):
+            for j in len(self.surr_field[0]):
                 if (self.x == i) and (self.y == j):
                     continue
                 if self.surr_field[i][j] == 'enemy': # change with enemy label in environment
-                    if (i,j) not in self.enemies_seen:
+                    if Env.enemy_id(i,j) in seen_enemies:
                         self.enemies_seen.append((i,j)) # mark as seen
-                    self.discovered_enemy.append(i,j) # set discovered enemy already seen
+                    else:    
+                        self.discovered_enemy.append((i,j)) # set new discovered enemy
 
     def scan_surrounding(self):
         # Implement function to get surrounging information from the Environemt Class for bushes and enemies present
-        self.find_bushes()
-        self.find_enemy()
+        self.surr_field = Env.get_surrounding(self.x, self.y)
         # need to set self.surr_field as a slice of the total environment
         # centered around current cell
 
@@ -86,6 +86,7 @@ class SearchModel:
         n = self.len
         self.field = np.zeros((n, n))
         self.agents = []
+        self.seen_enemies = list()   # store ids of already analyzed enemies
 
         # Assuming you have an Environment instance
 
