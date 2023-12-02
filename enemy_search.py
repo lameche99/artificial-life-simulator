@@ -7,9 +7,9 @@ import numpy as np
 class Agent:
     def __init__(self, unique_id, x, y, agent_type, view_sight, gather_sight, environment_len):
         self.unique_id = unique_id
-        self.x = x
-        self.y = y
-        self.prevx = -1
+        self.x = x                        # new position
+        self.y = y                        # new position
+        self.prevx = -1                   # one step previous position
         self.prevy = -1
         self.agent_type = agent_type
         self.view = view_sight
@@ -81,7 +81,7 @@ class SearchModel:
         n = self.len
         self.field = np.zeros((n, n))
         self.agents = []
-        self.seen_enemies = list()   # store ids of already analyzed enemies
+        seen_enemies = list()   # store ids of already analyzed enemies
 
         # Assuming you have an Environment instance
 
