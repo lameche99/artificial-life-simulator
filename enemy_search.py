@@ -27,6 +27,8 @@ class Agent:
         self.target_y = ""
         self.move_x = ""
         self.move_y = ""
+        self.enemy_end_1 = None
+        self.enemy_end_2 = None
 
     def deterministic_search(self): # "deterministic" movement of the agents 
         # eight possible moves are there
@@ -103,49 +105,86 @@ class Agent:
             return False
         return True
 
-    def approach_direction(self, pos):
+    def approach_direction(self, pos, move_x, move_y):
         (pi, pj) = pos
-        if (self.move_x=="" and self.move_y=="up"):
+        # should also add another condition to check if the bush is adjacent to an enemy
+        # better to avoid such bush
+
+        if (move_x=="" and move_y=="up"):
             if (pj>self.y):
                 return True
             else:
                 return False
-        if (self.move_x=="" and self.move_y=="down"):
+        if (move_x=="" and move_y=="down"):
             if (pj<self.y):
                 return True
             else:
                 return False
-        if (self.move_x=="right" and self.move_y==""):
+        if (move_x=="right" and move_y==""):
             if (pi>self.x):
                 return True
             else:
                 return False
-        if (self.move_x=="left" and self.move_y==""):
+        if (move_x=="left" and move_y==""):
             if (pi<self.x):
                 return True
             else:
                 return False
-        if (self.move_x=="right" and self.move_y=="up"):
+        if (move_x=="right" and move_y=="up"):
             if (pi>=self.x and pj>=self.y):
                 return True
             else:
                 return False
-        if (self.move_x=="right" and self.move_y=="down"):
+        if (move_x=="right" and move_y=="down"):
             if (pi>=self.x and pj<=self.y):
                 return True
             else:
                 return False
-        if (self.move_x=="left" and self.move_y=="up"):
+        if (move_x=="left" and move_y=="up"):
             if (pi<=self.x and pj>=self.y):
                 return True
             else:
                 return False
-        if (self.move_x=="left" and self.move_y=="down"):
+        if (move_x=="left" and move_y=="down"):
             if (pi<=self.x and pj<=self.y):
                 return True
             else:
                 return False
         return False
+    
+    def set_corner(self, ci, cj, label):
+        if(label==1):
+            if(self.enemy_end_1 is not None):
+                if(abs(self.y-cj)<abs(self.y-self.enemy_end_1[1])):
+                    self.enemy_end_1 = (ci, cj)
+            else:
+                self.enemy_end_1 = (ci, cj)
+        else:
+            if(self.enemy_end_2 is not None):
+                if(abs(self.x-ci)<abs(self.x-self.enemy_end_1[0])):
+                    self.enemy_end_2 = (ci, cj)
+            else:
+                self.enemy_end_2 = (ci, cj)
+
+    
+    def check_corner(self):
+        for i in range(max(0,self.x-self.gather), min(self.env_len, self.x+self.gather+1)):
+            for j in range(max(0,self.y-self.gather), min(self.env_len, self.y+self.gather+1)):
+                if self.surr_field[i][j] == 'enemy' and Env.enemy_id(i,j) == self.target_id:
+                    if(i==0 or i==self.env_len-1):
+                        self.set_corner(i,j,label=2)
+                    if(j==0 or j==self.env_len-1):
+                        self.set_corner(i,j,label=1)
+                    if(self.surr_field[i-1][j] != 'enemy' and self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j-1] != 'enemy'):
+                        self.set_corner(i,j,label=1)
+                    if(self.surr_field[i-1][j] != 'enemy' and self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j+1] != 'enemy'):
+                        self.set_corner(i,j,label=1)
+                    if(self.surr_field[i-1][j] != 'enemy' and self.surr_field[i][j-1] != 'enemy' and self.surr_field[i][j+1] != 'enemy'):
+                        self.set_corner(i,j,label=2)
+                    if(self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j+1] != 'enemy' and self.surr_field[i][j-1] != 'enemy'):
+                        self.set_corner(i,j,label=2)
+
+
 
     def strategic_search(self, enemy_x, enemy_y):
         # Implement a search function when the enemy is detected
@@ -178,16 +217,103 @@ class Agent:
                     self.move_y = "down"
                 else:
                     self.move_y = ""
-            bush_around = [bush for bush in self.bush if self.is_in_limit(bush, self.gather)]
-            eff_bushes = [bush for bush in bush_around if self.approach_direction(bush)]
+            bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
+            eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
             self.target_dist = -1
             return random.choice(eff_bushes) if eff_bushes else (random.choice(bush_around) if bush_around else (self.x, self.y))
         
+        else:
+            self.check_corner()    
+            if(self.enemy_end_1 is not None and self.enemy_end_2 is not None):
+                return (self.x, self.y)
+            if(self.enemy_end_1 is not None):
+                self.move_x = self.invert(self.target_x)
+                self.move_y = self.target_y
+                if(self.move_x == "left"):
+                    x_pseudo = self.x + eu_dist - self.gather
+                else:
+                    x_pseudo = self.x - eu_dist + self.gather
+                reg = self.get_region(x_pseudo, self.y, self.move_x, self.move_y, label = 1) # to be implemented
+                bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
+                eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.target_x, self.target_y)]
+                opt_bushes = [bush for bush in bush_around if self.opt_region(bush, x_pseudo, self.y, self.move_x, self.move_y, label = 1)]
+                return random.choice(opt_bushes) if opt_bushes else (random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
+            else:
+                self.move_x = self.target_x
+                self.move_y = self.invert(self.target_y)
+             
+                if(self.move_x == "left"):
+                    x_pseudo = self.x + eu_dist - self.gather
+                else:
+                    x_pseudo = self.x - eu_dist + self.gather
+                reg = self.get_region(x_pseudo, self.y, self.move_x, self.move_y, label = 2)
+                bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
+                eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
+                opt_bushes = [bush for bush in bush_around if (bush in reg)]
+                return random.choice(opt_bushes) if opt_bushes else (random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
 
+            
+            """
+            if(self.enemy_end_2 is not None):
+                self.move_x = self.target_x
+                self.move_y = self.invert(self.target_y)
+            """  
+            pass
             
     
         # ...
         pass
+
+    def get_region(self, x, y, move_x, move_y, label):
+        if (label==2):
+            if(move_x=="left"):
+                x_new = x - self.gather
+            else:
+                x_new = x + self.gather
+            if(move_y=="up"):
+                y_new = y + self.gather
+            else:
+                y_new = y - self.gather
+            return self.get_region(x_new, y_new, self.invert(move_x), self.invert(move_y), 1)
+        else:
+            pass
+    
+    def opt_region(self, pos, x, y, move_x, move_y, label):
+        if (label==2):
+            if(move_x=="left"):
+                x_new = x - self.gather
+            else:
+                x_new = x + self.gather
+            if(move_y=="up"):
+                y_new = y + self.gather
+            else:
+                y_new = y - self.gather
+            return self.opt_region(pos, x_new, y_new, self.invert(move_x), self.invert(move_y), 1)
+        else:
+            (pi, pj) = pos
+            if(move_y == "up" and (pj<y or pj>y+5)):
+                return False
+            if(move_y == "down" and (pj>y or pj<y-5)):
+                return False
+            if(move_x == "left" and (pi < x - abs(y-pj))):
+                return False
+            if(move_x == "right" and (pi > x + abs(y-pj))):
+                return False
+            return True
+            
+
+
+        pass
+
+    def invert(self, direction):
+        if direction == "up":
+            return "down"
+        if direction == "down":
+            return "up"
+        if direction == "left":
+            return "right"
+        if direction == "right":
+            return "left"
 
     def find_bushes(self):
         # Can be used to make a list of bushes using the information from self.surr_field
