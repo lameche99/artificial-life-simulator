@@ -1,3 +1,7 @@
+import random
+import numpy as np
+from agent import Agent
+
 class SearchModel:
     def __init__(self, environment_len, num_agents):
         self.len = environment_len
