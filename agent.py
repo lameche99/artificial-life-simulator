@@ -1,20 +1,20 @@
-# import Environment as Env
-# import Enemy
+from environment import Environment
 import random
 import numpy as np
 
 class Agent:
-    def __init__(self, unique_id, x, y, agent_type, view_sight, gather_sight, environment_len):
+    def __init__(self, unique_id, x, y, view_sight, gather_sight, env_len, type_='agent'):
         self.unique_id = unique_id
         self.x = x                        # new position
         self.y = y                        # new position
         self.prevx = -1                   # one step previous position
         self.prevy = -1
         self.pattern_index = 0
-        self.agent_type = agent_type
+        self.type_ = type_
         self.view = view_sight
         self.gather = gather_sight
-        self.env_len = environment_len
+        self.env = None
+        self.env_len = env_len
         self.discovered_enemy = list()    # for newly discovered enemies
         self.enemies_seen = list()        # for already analized enemies
         self.bushes = list()
@@ -32,13 +32,13 @@ class Agent:
     def deterministic_search(self): # "deterministic" movement of the agents 
         # eight possible moves are there
         possible_moves = [
-            (self.x + 1, self.y) # movement to the right
-            (self.x + 1, self.y + 1)
-            (self.x + 1, self.y - 1)
-            (self.x - 1, self.y) # movement to the left
-            (self.x - 1, self.y + 1)
-            (self.x - 1, self.y - 1)
-            (self.x, self.y + 1) # movement in y-direction only
+            (self.x + 1, self.y), # movement to the right
+            (self.x + 1, self.y + 1),
+            (self.x + 1, self.y - 1),
+            (self.x - 1, self.y), # movement to the left
+            (self.x - 1, self.y + 1),
+            (self.x - 1, self.y - 1),
+            (self.x, self.y + 1), # movement in y-direction only
             (self.x, self.y - 1)
         ]
 
@@ -59,13 +59,13 @@ class Agent:
     def random_search(self): # "stochastic" movement of the agents 
         # eight possible moves are there
         possible_moves = [
-            (self.x + 1, self.y) # movement to the right
-            (self.x + 1, self.y + 1)
-            (self.x + 1, self.y - 1)
-            (self.x - 1, self.y) # movement to the left
-            (self.x - 1, self.y + 1)
-            (self.x - 1, self.y - 1)
-            (self.x, self.y + 1) # movement in y-direction only
+            (self.x + 1, self.y), # movement to the right
+            (self.x + 1, self.y + 1),
+            (self.x + 1, self.y - 1),
+            (self.x - 1, self.y), # movement to the left
+            (self.x - 1, self.y + 1),
+            (self.x - 1, self.y - 1),
+            (self.x, self.y + 1), # movement in y-direction only
             (self.x, self.y - 1)
         ]
 
@@ -80,10 +80,15 @@ class Agent:
     def get_enemy_cells(self):
         id = self.target_id
         cell_list = []
-        for i in len(self.surr_field):
-            for j in len(self.surr_field[0]):
-                if self.surr_field[i][j] == 'enemy'and Env.enemy_id(i, j) == id:
-                    cell_list.append((i, j))    # append cell locations oof only taht particular target
+        topy = max(0, self.y-self.view)
+        boty = min(self.env_len, self.y+self.view+1)
+        leftx = max(0, self.x-self.view)
+        rightx = min(self.env_len, self.x+self.view+1)
+        for i in range(topy, boty):
+            for j in range(leftx, rightx):
+                if (not self.env.grid[i][j] is None) and (self.env.grid[i][j].type_ == 'enemy'): # change with enemy label in environment
+                    if self.env.grid[i][j].uid == id:
+                        cell_list.append((i, j))
         return cell_list
     
     def get_enemy_distance(self, cell_list):
@@ -168,7 +173,7 @@ class Agent:
     def check_corner(self):
         for i in range(max(0,self.x-self.gather), min(self.env_len, self.x+self.gather+1)):
             for j in range(max(0,self.y-self.gather), min(self.env_len, self.y+self.gather+1)):
-                if self.surr_field[i][j] == 'enemy' and Env.enemy_id(i,j) == self.target_id:
+                if self.surr_field[i][j] == 'enemy' and self.env.enemy_id(i,j) == self.target_id:
                     if(i==0 or i==self.env_len-1):
                         self.set_corner(i,j,label=2)
                     if(j==0 or j==self.env_len-1):
@@ -248,18 +253,6 @@ class Agent:
                 opt_bushes = [bush for bush in bush_around if (bush in reg)]
                 return random.choice(opt_bushes) if opt_bushes else (random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
 
-            
-            """
-            if(self.enemy_end_2 is not None):
-                self.move_x = self.target_x
-                self.move_y = self.invert(self.target_y)
-            """  
-            pass
-            
-    
-        # ...
-        pass
-
     def get_region(self, x, y, move_x, move_y, label):
         if (label==2):
             if(move_x=="left"):
@@ -296,10 +289,6 @@ class Agent:
             if(move_x == "right" and (pi > x + abs(y-pj))):
                 return False
             return True
-            
-
-
-        pass
 
     def invert(self, direction):
         if direction == "up":
@@ -315,12 +304,14 @@ class Agent:
         # Can be used to make a list of bushes using the information from self.surr_field
         # assume self.surr_field is 2D grid slice of environment surrounding the agent
         bushes = list()
-        for i in len(self.surr_field):
-            for j in len(self.surr_field[0]):
-                if (self.x == i) and (self.y == j):
-                    continue
-                if self.surr_field[i][j] == 'bush': # change with bush label in environment
-                    bushes.append((i, j))
+        topy = max(0, self.y-self.view)
+        boty = min(self.env_len, self.y+self.view+1)
+        leftx = max(0, self.x-self.view)
+        rightx = min(self.env_len, self.x+self.view+1)
+        for i in range(topy, boty):
+            for j in range(leftx, rightx):
+                if self.env.grid[i][j] == 'bush': # change with bush label in environment
+                    bushes.append((j, i))
         self.bushes = bushes
 
     def find_enemy(self, seen_enemies = []):
@@ -329,19 +320,22 @@ class Agent:
         # return a list of nested tuples or empty list if there are no enemies
         # update enemies_seen list to keep track of them
         # if new enemy is found update discovered_enemy
-        for i in len(self.surr_field):
-            for j in len(self.surr_field[0]):
-                if (self.x == i) and (self.y == j):
-                    continue
-                if self.surr_field[i][j] == 'enemy': # change with enemy label in environment
-                    if Env.enemy_id(i,j) in seen_enemies:
-                        self.enemies_seen.append((i,j)) # mark as seen
+        topy = max(0, self.y-self.view)
+        boty = min(self.env_len, self.y+self.view+1)
+        leftx = max(0, self.x-self.view)
+        rightx = min(self.env_len, self.x+self.view+1)
+        for i in range(topy, boty):
+            for j in range(leftx, rightx):
+                if (not self.env.grid[i][j] is None) and (self.env.grid[i][j].type_ == 'enemy'): # change with enemy label in environment
+                    if self.env.grid[i][j].uid in seen_enemies:
+                        self.enemies_seen.append((i, j)) # mark as seen
                     else:    
-                        self.discovered_enemy.append((i,j)) # set new discovered enemy
+                        self.discovered_enemy.append((i, j)) # set new discovered enemy
+        
         if(self.discovered_enemy):
             self.target = 1
             (ei, ej) = self.discovered_enemy[0]
-            self.target_id = Env.enemy_id(ej,ei)
+            self.target_id = self.env.grid[ei][ej].uid
             if(ei >= self.x):
                 self.target_x = "right"
                 self.move_x = "right"
@@ -357,36 +351,8 @@ class Agent:
 
     def scan_surrounding(self):
         # Implement function to get surrounging information from the Environemt Class for bushes and enemies present
-        self.surr_field = Env.get_surrounding(self.x, self.y)
+        self.surr_field = self.env.get_surrounding(self.x, self.y, self.view)
+        self.find_bushes()
+        self.find_enemy(seen_enemies=self.enemies_seen)
         # need to set self.surr_field as a slice of the total environment
         # centered around current cell
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-# Example usage
-width = 10
-height = 10
-num_agents = 8
-view_sight = 3
-
-model = SearchModel(width, height, num_agents, view_sight)
-
-for i in range(50):
-    model.step()
-'''
-
-
