@@ -238,9 +238,34 @@ begin
 		k, _ = size(alt_p)
 		A_gpu = CuArray(A)
 	    B = similar(A_gpu)  # Create a GPU array of the same size and type as A
-	
-		threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
-	    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+		if !isnothing(max_threads) 
+			if !isnothing(m)
+				threads_x = min(max_threads, m)
+			else
+				threads_x = max_threads
+			end
+		else
+			if !isnothing(m)
+				threads_x = min(32, m)
+			else
+				threads_x = 26
+			end
+		end
+		if !isnothing(max_threads) 
+			if !isnothing(n)
+				threads_y = min(max_threads, n)
+			else
+				threads_y = max_threads
+			end
+		else
+			if !isnothing(n)
+				threads_y = min(32, n)
+			else
+				threads_y = 26
+			end
+		end
+		# threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
+	 #    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
 	    blocks_x = ceil(Int, m / threads_x)
 	    blocks_y = ceil(Int, n / threads_y)
 		
@@ -279,15 +304,31 @@ begin
 		topo_gpu = CuArray(topo)
 		bushes_gpu = CuArray(bushes)
 		output = similar(topo_gpu)
-		if(m>max_threads)
-			threads_x = max_threads  # Limit to max_threads threads in the x dimension
+		if !isnothing(max_threads) 
+			if !isnothing(m)
+				threads_x = min(max_threads, m)
+			else
+				threads_x = max_threads
+			end
 		else
-			threads_x = m  # Limit to m threads in the x dimension
+			if !isnothing(m)
+				threads_x = min(32, m)
+			else
+				threads_x = 26
+			end
 		end
-		if(n>max_threads)
-			threads_y = max_threads  # Limit to max_threads threads in the y dimension
+		if !isnothing(max_threads) 
+			if !isnothing(n)
+				threads_y = min(max_threads, n)
+			else
+				threads_y = max_threads
+			end
 		else
-			threads_y = n  # Limit to m threads in the y dimension	
+			if !isnothing(n)
+				threads_y = min(32, n)
+			else
+				threads_y = 26
+			end
 		end
 	    blocks_x = ceil(Int, m / threads_x)
 	    blocks_y = ceil(Int, n / threads_y)
@@ -444,8 +485,34 @@ begin
 		outp = fill((0.0, 0.0), n, n)
 	    output_x = CuArray(fill(0.0, n, n))  
 	    output_y = CuArray(fill(0.0, n, n))  
-		threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
-	    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+		if !isnothing(max_threads) 
+			if !isnothing(m)
+				threads_x = min(max_threads, m)
+			else
+				threads_x = max_threads
+			end
+		else
+			if !isnothing(m)
+				threads_x = min(32, m)
+			else
+				threads_x = 26
+			end
+		end
+		if !isnothing(max_threads) 
+			if !isnothing(n)
+				threads_y = min(max_threads, n)
+			else
+				threads_y = max_threads
+			end
+		else
+			if !isnothing(n)
+				threads_y = min(32, n)
+			else
+				threads_y = 26
+			end
+		end
+		# threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
+	 #    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
 	    blocks_x = ceil(Int, m / threads_x)
 	    blocks_y = ceil(Int, n / threads_y)
 		
@@ -788,8 +855,8 @@ md"Clock t = $t"
 
 # ╔═╡ 6d80d171-2ef7-4646-a289-cdeea175221e
 begin
-	function get_unitDxDY(dx, dy)
-		angle = atan(dy,dx)# % pi
+	function get_unitDxDY(dx, dy, rotateByPiby2=0)
+		angle = atan(dy,dx) + rotateByPiby2 * pi/2# % pi
 
 		# print(" angle=",angle/pi*360.)
 		
@@ -797,33 +864,33 @@ begin
 		# 	angle = (angle + pi) % pi
 		# end
 
-		print("\n\t   (",@sprintf("%.3f",dx),",",@sprintf("%.3f",dy),") a=",@sprintf("%.3f",angle/pi*180.))
+		# print("\n\t   (",@sprintf("%.3f",dx),",",@sprintf("%.3f",dy),") a=",@sprintf("%.3f",angle/pi*180.))
 				
 		# Determine the direction in the Moore neighborhood
 		if angle < -7*pi/8 || angle >= 7*pi/8
 			dx, dy = -1, 0  # Move left
-			print(" left")
+			# print(" left")
 		elseif -7*pi/8 <= angle < -5*pi/8
 			dx, dy = -1, -1   # Move down-left
-			print(" down-left")
+			# print(" down-left")
 		elseif -5*pi/8 <= angle < -3*pi/8
 			dx, dy = 0, -1   # Move down
-			print(" down")
+			# print(" down")
 		elseif -3*pi/8 <= angle < -1*pi/8
 			dx, dy = 1, -1   # Move bottom-right
-			print(" bottom-right")
+			# print(" bottom-right")
 		elseif -1*pi/8 <= angle < pi/8
 			dx, dy = 1, 0   # Move right
-			print(" right")
+			# print(" right")
 		elseif pi/8 <= angle < 3*pi/8
 			dx, dy = 1, 1  # Move top-right
-			print(" top-right")
+			# print(" top-right")
 		elseif 3*pi/8 <= angle < 5*pi/8
 			dx, dy = 0, 1  # Move top
-			print(" top")
+			# print(" top")
 		elseif 5*pi/8 <= angle < 7*pi/8
 			dx, dy = -1, 1  # Move top-left
-			print(" top-left")
+			# print(" top-left")
 		end
 		return dx, dy
 	end
@@ -846,11 +913,18 @@ begin
 	            y_other = enemiesAtT[i, 2]
 	
 				if distance(x_new, y_new, x_other, y_other) < (min_distance + enemiesAtT[i, 3])
-					print("col (", e, ",", i, ") R=(",enemiesAtT[e, 1] - x_other, ",", enemiesAtT[e, 2] - y_other,")")
+					# print("col (", e, ",", i, ") R=(",enemiesAtT[e, 1] - x_other, ",", enemiesAtT[e, 2] - y_other,")")
 					# dx, dy = [enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other]
 					if enemiesAtT[i,3] >= enemiesAtT[e, 3]
-						dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other)
-						print(" dxdy=(",dx,",",dy,")")
+						if rand()<0.5
+							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other)
+						elseif rand()<0.5							
+							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other, 1)
+						else							
+							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other, -1)
+						end
+						
+						# print(" dxdy=(",dx,",",dy,")")
 						collision = true
 						# println("\t\t\ttemp=", temperature, ", T*1.1=", temperature * 1.1)
 						temperature = min(temperature * 1.7, 100)
@@ -874,7 +948,7 @@ begin
 		enem_T=fill(6.0, (n_enem, 1))
 		for ti in 1:t
 			for e in 1:enemiesAtT_m
-				print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
+				# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
 				# println("\n\tT0(",e,")=", enem_T[e])
 				i, j = enemiesAtT[e, [1,2]]
 				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
@@ -889,11 +963,11 @@ begin
 				dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
 				
 				if ti>1
-					print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
+					# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
 					# Check and adjust movement to avoid collision
 				    min_distance = 10 + r
 					dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
-					print("\n\t    coll?", collision)
+					# print("\n\t    coll?", collision)
 				end
 				
 				
@@ -907,7 +981,7 @@ begin
 						enem_T[e] = min(enem_T[e] * 1.01, 30)
 					end
 
-					print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
+					# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
 
 					if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
 						if rand()<0.5
@@ -937,7 +1011,7 @@ begin
 					# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
 					# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
 				else
-					println()
+					# println()
 				end
 				
 
@@ -2454,6 +2528,6 @@ version = "1.4.1+1"
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
 # ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
 # ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
+# ╟─6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
