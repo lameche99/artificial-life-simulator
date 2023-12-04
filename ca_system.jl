@@ -773,7 +773,7 @@ enemies
 slope[24*Int(n/L),80*Int(n/L)]
 
 # ╔═╡ 25a2750f-8b75-401a-b7a5-2e51af868845
-@bind t NumberField(1:10000)
+@bind t NumberField(1:10000, default=800)
 
 # ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
 Markdown.parse("``t=$(t)\\ \\text{ticks}``")
@@ -855,6 +855,7 @@ md"Clock t = $t"
 
 # ╔═╡ 6d80d171-2ef7-4646-a289-cdeea175221e
 begin
+	# Function to determine the unit vector components based on the given dx, dy, and rotation angle
 	function get_unitDxDY(dx, dy, rotateByPiby2=0)
 		angle = atan(dy,dx) + rotateByPiby2 * pi/2# % pi
 
@@ -894,15 +895,18 @@ begin
 		end
 		return dx, dy
 	end
-		
+
+	# Function to calculate the Gibbs-Boltzmann probability
 	function gibbs_boltzmann_probability(energy_difference, temperature)
 	    return exp(-energy_difference / temperature)
 	end
-
+	
+	# Function to calculate the Euclidean distance between two points
 	function distance(x1, y1, x2, y2)
 	    return sqrt((x2 - x1)^2 + (y2 - y1)^2)
 	end
 
+	# Function to avoid collision between enemies
 	function avoid_collision(enemiesAtT, e, dx, dy, min_distance, temperature, collision)
 	    x_new = enemiesAtT[e, 1] + dx
 	    y_new = enemiesAtT[e, 2] + dy
@@ -915,7 +919,10 @@ begin
 				if distance(x_new, y_new, x_other, y_other) < (min_distance + enemiesAtT[i, 3])
 					# print("col (", e, ",", i, ") R=(",enemiesAtT[e, 1] - x_other, ",", enemiesAtT[e, 2] - y_other,")")
 					# dx, dy = [enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other]
+					
+					# Adjust movement to avoid collision based on the relative size of enemies
 					if enemiesAtT[i,3] >= enemiesAtT[e, 3]
+						# Randomly choose a direction to move away from the colliding enemy
 						if rand()<0.5
 							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other)
 						elseif rand()<0.5							
@@ -925,9 +932,12 @@ begin
 						end
 						
 						# print(" dxdy=(",dx,",",dy,")")
-						collision = true
 						# println("\t\t\ttemp=", temperature, ", T*1.1=", temperature * 1.1)
+						
+						collision = true
+						# Adjust the temperature to avoid collision
 						temperature = min(temperature * 1.7, 100)
+						
 						# println("\t\t\ttemp=", temperature)
 					end
 	                break
@@ -938,15 +948,21 @@ begin
 	    return dx, dy, temperature, collision
 	end
 
-	seed_value = 42  # You can choose any integer value
+	seed_value = 42
 	Random.seed!(seed_value)
 	
+	# Main function for gradient ascent while avoiding collisions
 	function gradient_ascend_avoidCollision(enemies, t)
 		enemiesAtT = copy(enemies)
 		enemiesAtT_m, _ = size(enemiesAtT)
 		surfacePlot = []
-		enem_T=fill(6.0, (n_enem, 1))
+		
+		# Initialize the enemy temperatures
+		enem_T=fill(6.0, (n_enem, 1)) 
+		
+		# Iterate over time steps
 		for ti in 1:t
+			# Iterate over enemies
 			for e in 1:enemiesAtT_m
 				# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
 				# println("\n\tT0(",e,")=", enem_T[e])
@@ -961,9 +977,11 @@ begin
 				# dy = slopeHere[2]
 
 				dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
-				
+
+				# Check and adjust movement to avoid collision
 				if ti>1
 					# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
+					
 					# Check and adjust movement to avoid collision
 				    min_distance = 10 + r
 					dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
@@ -976,6 +994,7 @@ begin
 					# Check Gibbs Boltzmann probability
 					if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
 						# print("\tmetropolis trip ", metropolis)
+						
 	                    # Take the opposite direction
 	                    dx, dy = -dx, -dy
 						enem_T[e] = min(enem_T[e] * 1.01, 30)
@@ -983,57 +1002,52 @@ begin
 
 					# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
 
+					# Update enemy positions based on movement
+					# if the enemy is near the boundary, bring it in (X)
 					if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
-						if rand()<0.5
+						if rand()<0.5 # 50% net probability to move inside
 							enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
-						elseif rand()<1/3
+						elseif rand()<1/3 # 16.67% net probability to move down
 							enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
-						elseif rand()<1/2
+						elseif rand()<1/2 # 16.67% net probability to move up
 							enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
 						end
 					else
 						enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
 					end
+					# if the enemy is near the boundary, bring it in (Y)
 					if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
-						if rand()<0.5
+						if rand()<0.5 # 50% net probability to move inside
 							enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
-						elseif rand()<1/3
+						elseif rand()<1/3 # 16.67% net probability to move left
 							enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
-						elseif rand()<1/2
+						elseif rand()<1/2 # 16.67% net probability to move right
 							enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
 						end
 					else
 						enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
 					end
-							
-							
 					
 					# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
 					# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
-				else
-					# println()
 				end
 				
 
 					enem_T[e] *= 0.95
-				if ti % 10 == 0
-				end
+				# if ti % 10 == 0
+				# end
 					
 			end
 			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
-			
-			function colors_alias2(x, y)
-				return color(x, y, alt_p, A, enemiesInA)
-			end
-			
+
+			# Update the surface plot for visualization
 			x = 1:n
 			y = 1:n
-			
 			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(plot_topo_gpu(topo, A)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
 		end
-		for e in 1:enemiesAtT_m
+		# for e in 1:enemiesAtT_m
 			# println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
-		end
+		# end
 		return surfacePlot
 	end
 	surfacePlot1 = gradient_ascend_avoidCollision(enemies, t)
@@ -2528,6 +2542,6 @@ version = "1.4.1+1"
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
 # ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
 # ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╟─6d80d171-2ef7-4646-a289-cdeea175221e
+# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
