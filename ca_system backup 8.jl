@@ -29,8 +29,31 @@ begin
 	using CUDA
 	CUDA.allowscalar(false)
 	using Random
-	using Printf
 	md"Just Importing libraries here..."
+end
+
+# ╔═╡ 0c4c7e4a-29e9-44c1-8392-ee688dc150b0
+begin
+	using CSV, DataFrames, HTTP
+	
+	df = CSV.File(
+	    HTTP.get("https://raw.githubusercontent.com/plotly/datasets/master/api_docs/mt_bruno_elevation.csv").body
+	) |> DataFrame
+	
+	p = Plots.plot(Plots.surface(z=Matrix{Float64}(df), showscale=false))
+	relayout!(p,
+	    title="Mt Bruno Elevation",
+	    width=400, height=400,
+	    margin=attr(t=40, r=0, l=20, b=20)
+	)
+	
+	name = "eye = (x:0., y:0., z:2.5)"
+	camera1 = attr(
+	    eye=attr(x=0., y=0., z=2.5)
+	)
+	
+	relayout!(p, scene_camera=camera1, title=name)
+	p
 end
 
 # ╔═╡ 4727903f-a54b-4d73-8998-fa99bb2481aa
@@ -44,9 +67,6 @@ begin
 	end
 	md"Defining show_image() that can plot the 2D version of our model." 
 end
-
-# ╔═╡ d83db108-12df-4094-990d-474accf6e976
-md"Max Threads, $(@bind max_threads NumberField(1:32, default=32))"
 
 # ╔═╡ df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 md"## Initial State"
@@ -134,8 +154,8 @@ function conway_gpu(A)
 	A = CuArray(A)
     B = similar(A)  # Create a GPU array of the same size and type as A
 
-	threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
-    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+	threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
     blocks_x = ceil(Int, m / threads_x)
     blocks_y = ceil(Int, n / threads_y)
 	
@@ -239,8 +259,8 @@ begin
 		A_gpu = CuArray(A)
 	    B = similar(A_gpu)  # Create a GPU array of the same size and type as A
 	
-		threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
-	    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+		threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+	    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
 	    blocks_x = ceil(Int, m / threads_x)
 	    blocks_y = ceil(Int, n / threads_y)
 		
@@ -273,22 +293,11 @@ begin
 	
 	function plot_topo_gpu(topo, bushes)
 	    m, n = size(topo)
-		# println(topo)
-		# println("Sizes of m, n = ", m, " ",n)
-		# println(min(max_threads, m))
 		topo_gpu = CuArray(topo)
 		bushes_gpu = CuArray(bushes)
 		output = similar(topo_gpu)
-		if(m>max_threads)
-			threads_x = max_threads  # Limit to max_threads threads in the x dimension
-		else
-			threads_x = m  # Limit to m threads in the x dimension
-		end
-		if(n>max_threads)
-			threads_y = max_threads  # Limit to max_threads threads in the y dimension
-		else
-			threads_y = n  # Limit to m threads in the y dimension	
-		end
+		threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+	    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
 	    blocks_x = ceil(Int, m / threads_x)
 	    blocks_y = ceil(Int, n / threads_y)
 		
@@ -414,8 +423,8 @@ begin
 
 			# B[i, j] = atan(dfbydy, dfbydx)
 			norm = (dfbydx^2+dfbydy^2)^0.5
-			Bx[j, i] = dfbydy/norm
-			By[j, i] = dfbydx/norm
+			Bx[i, j] = dfbydx/norm
+			By[i, j] = dfbydy/norm
 		elseif 2 <= i <= m-1 && 2 <= j <= n-1
 			xph = A[i+1,j]
 			xmh = A[i-1,j]
@@ -426,26 +435,25 @@ begin
 			dfbydx = (xph-xmh)/2
 			dfbydy = (yph-ymh)/2
 
-			# B[j, i] = atan(dfbydy, dfbydx)
+			# B[i, j] = atan(dfbydy, dfbydx)
 			norm = (dfbydx^2+dfbydy^2)^0.5
-			Bx[j, i] = dfbydy/norm
-			By[j, i] = dfbydx/norm
+			Bx[i, j] = dfbydx/norm
+			By[i, j] = dfbydy/norm
 		elseif 1 <= i <= m && 1 <= j <= n
-			Bx[j, i] = 0.0
-			By[j, i] = 0.0
+			Bx[i, j] = 0.0
+			By[i, j] = 0.0
 		end
 		return
 	end
 	
 	function slope_gpu(topo)
 	    m, n = size(topo)
-		# println("Sizes of m, n = ", m, " ",n)
 		topo_gpu = CuArray(topo)
 		outp = fill((0.0, 0.0), n, n)
 	    output_x = CuArray(fill(0.0, n, n))  
 	    output_y = CuArray(fill(0.0, n, n))  
-		threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
-	    threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+		threads_x = min(32, m)  # Limit to 32 threads in the x dimension
+	    threads_y = min(32, n)  # Limit to 32 threads in the y dimension
 	    blocks_x = ceil(Int, m / threads_x)
 	    blocks_y = ceil(Int, n / threads_y)
 		
@@ -494,7 +502,6 @@ begin
 	Random.seed!(seed)
 	enem_pos = rand(1:L, (n_enem,2));
 	enem_z = [topo[row[1], row[2]] for row in eachrow(enem_pos)]
-	# enem_T = fill(1.0, (n_enem,1)) # temperature
 	enem_r = rand(1:3, (n_enem,1));
 	enemies = hcat(enem_pos, enem_r);
 	md"Generating random enemy clusters. The look like so..."
@@ -570,7 +577,7 @@ begin
 
 		if(A[j, i]!=0)
 			return -10
-		elseif (enemiesInA[i, j]!=0)
+		elseif (enemiesInA[j, i]!=0)
 			return max_height+10
 		end
 		for k in 1:m
@@ -628,7 +635,7 @@ begin
 	
 			if(A_gpu[i, j]!=0)
 				colors_A_gpu[i, j] = -10
-			elseif (enemiesInA_gpu[j, i]!=0)
+			elseif (enemiesInA_gpu[i, j]!=0)
 				colors_A_gpu[i, j] = max_height+10
 			else
 				flag = 1
@@ -657,8 +664,8 @@ begin
 		colors_A_gpu = similar(A_gpu)
 		enemiesInA_gpu = CuArray(enemiesInA)  
 		
-		threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
-		threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+		threads_x = min(25, m)  # Limit to 25 threads in the x dimension
+		threads_y = min(25, n)  # Limit to 25 threads in the y dimension
 		blocks_x = ceil(Int, m / threads_x)
 		blocks_y = ceil(Int, n / threads_y)
 		
@@ -669,47 +676,16 @@ begin
 end
 
 # ╔═╡ 84bc9a37-dce3-40cf-85ae-b9107339aabe
-	Plots.contour(1:n, 1:n,topo, levels=60, ratio=1, xlim=[0,n], ylim=[0,n], fill=true, showscale=false)
+	Plots.contour(1:n, 1:n,topo, levels=60, xlim=[0,n], ylim=[0,n], ratio=1, fill=true)
 
-# ╔═╡ 8a586d49-86c9-4f7f-b438-15ba8181ed2c
-begin
-	x_coordinates = [el[1] for el in slope];
-	y_coordinates = [el[2] for el in slope];
-	quiver(transpose(repeat(reshape(1:n, 1, n), n, 1)),repeat(reshape(1:n, 1, n), n, 1), quiver=( x_coordinates, y_coordinates), arrow_size=1,ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n])
-end
-
-# ╔═╡ 37f3c01d-553e-498d-aea5-9e31b071f6e8
-24+x_coordinates[24, 75], 75+y_coordinates[24, 75]
-
-# ╔═╡ f00613ba-d962-4fe8-8763-98e5af6007a7
-25+x_coordinates[25,81], 81+y_coordinates[25,81]
-
-# ╔═╡ 613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
-25+slope[25,81][1], 81+slope[25,81][2]
-
-# ╔═╡ a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
-md"Let's follow a \"gradient ascend\" method where the clusters just follow the direction with maximum ascend in hopes of reaching the peak."
-
-# ╔═╡ 9c8dff1e-02bd-4acb-8771-389b5c708d05
-# ╠═╡ disabled = true
-#=╠═╡
-@bind t html"""
-<input type=range min=1 max=1000 step=1 value=1 style='width: 80%;' oninput='this.nextElementSibling.value=this.value;'>
-<output>0</output>
-"""
-  ╠═╡ =#
-
-# ╔═╡ 6f603c0b-b852-473f-9099-b6292ad395b9
-enemies
-
-# ╔═╡ c2873a4e-0bde-4703-be42-9ded1e7d9379
-slope[24*Int(n/L),80*Int(n/L)]
-
-# ╔═╡ 25a2750f-8b75-401a-b7a5-2e51af868845
-@bind t NumberField(1:10000)
+# ╔═╡ 282cd2e0-8b45-4625-af65-49f2167b1dc4
+md"Clock $(@bind t Slider(1:100, show_value=true))"
 
 # ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
 Markdown.parse("``t=$(t)\\ \\text{ticks}``")
+
+# ╔═╡ a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
+md"Let's follow a \"gradient ascend\" method where the clusters just follow the direction with maximum ascend in hopes of reaching the peak."
 
 # ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
 begin
@@ -717,35 +693,13 @@ begin
 		enemiesAtT = copy(enemies)
 		enemiesAtT_m, _ = size(enemiesAtT)
 		surfacePlot = []
-		for ti in 2:t
+		for ti in 1:t
 			for e in 1:enemiesAtT_m
 				i, j = enemiesAtT[e, [1,2]]
 				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
 				r = enemiesAtT[e, 3]
-				# dx = ceil(slopeHere[1] * n/L)
-				# dy = ceil(slopeHere[2] * n/L)
-				
-				angle = atan(slopeHere[2], slopeHere[1])
-				
-				# Determine the direction in the Moore neighborhood
-				if angle < -7*pi/8 || angle >= 7*pi/8
-					dx, dy = -1, 0  # Move left
-				elseif -7*pi/8 <= angle < -5*pi/8
-					dx, dy = -1, -1   # Move down-left
-				elseif -5*pi/8 <= angle < -3*pi/8
-					dx, dy = 0, -1   # Move down
-				elseif -3*pi/8 <= angle < -1*pi/8
-					dx, dy = 1, -1   # Move bottom-right
-				elseif -1*pi/8 <= angle < pi/8
-					dx, dy = 1, 0   # Move right
-				elseif pi/8 <= angle < 3*pi/8
-					dx, dy = 1, 1  # Move top-right
-				elseif 3*pi/8 <= angle < 5*pi/8
-					dx, dy = 0, 1  # Move top
-				elseif 5*pi/8 <= angle < 7*pi/8
-					dx, dy = -1, 1  # Move top-left
-				end
-				
+				dx = ceil(slopeHere[1] * n/L)
+				dy = ceil(slopeHere[2] * n/L)
 				enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
 				enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
 			end
@@ -758,8 +712,8 @@ begin
 			x = 1:n
 			y = 1:n
 			
-		end
 			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(plot_topo_gpu(topo, A)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+		end
 		for e in 1:enemiesAtT_m
 			println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
 		end
@@ -783,208 +737,32 @@ begin
 	PlutoPlotly.plot(surfacePlot, layout)
 end
 
-# ╔═╡ 282cd2e0-8b45-4625-af65-49f2167b1dc4
-md"Clock t = $t"
-
-# ╔═╡ 6d80d171-2ef7-4646-a289-cdeea175221e
-begin
-	function get_unitDxDY(dx, dy)
-		angle = atan(dy,dx)# % pi
-
-		# print(" angle=",angle/pi*360.)
-		
-		# if dx<0
-		# 	angle = (angle + pi) % pi
-		# end
-
-		print("\n\t   (",@sprintf("%.3f",dx),",",@sprintf("%.3f",dy),") a=",@sprintf("%.3f",angle/pi*180.))
-				
-		# Determine the direction in the Moore neighborhood
-		if angle < -7*pi/8 || angle >= 7*pi/8
-			dx, dy = -1, 0  # Move left
-			print(" left")
-		elseif -7*pi/8 <= angle < -5*pi/8
-			dx, dy = -1, -1   # Move down-left
-			print(" down-left")
-		elseif -5*pi/8 <= angle < -3*pi/8
-			dx, dy = 0, -1   # Move down
-			print(" down")
-		elseif -3*pi/8 <= angle < -1*pi/8
-			dx, dy = 1, -1   # Move bottom-right
-			print(" bottom-right")
-		elseif -1*pi/8 <= angle < pi/8
-			dx, dy = 1, 0   # Move right
-			print(" right")
-		elseif pi/8 <= angle < 3*pi/8
-			dx, dy = 1, 1  # Move top-right
-			print(" top-right")
-		elseif 3*pi/8 <= angle < 5*pi/8
-			dx, dy = 0, 1  # Move top
-			print(" top")
-		elseif 5*pi/8 <= angle < 7*pi/8
-			dx, dy = -1, 1  # Move top-left
-			print(" top-left")
-		end
-		return dx, dy
-	end
-		
-	function gibbs_boltzmann_probability(energy_difference, temperature)
-	    return exp(-energy_difference / temperature)
-	end
-
-	function distance(x1, y1, x2, y2)
-	    return sqrt((x2 - x1)^2 + (y2 - y1)^2)
-	end
-
-	function avoid_collision(enemiesAtT, e, dx, dy, min_distance, temperature, collision)
-	    x_new = enemiesAtT[e, 1] + dx
-	    y_new = enemiesAtT[e, 2] + dy
-	
-	    for i in 1:size(enemiesAtT, 1)
-	        if i != e
-	            x_other = enemiesAtT[i, 1]
-	            y_other = enemiesAtT[i, 2]
-	
-				if distance(x_new, y_new, x_other, y_other) < (min_distance + enemiesAtT[i, 3])
-					print("col (", e, ",", i, ") R=(",enemiesAtT[e, 1] - x_other, ",", enemiesAtT[e, 2] - y_other,")")
-					# dx, dy = [enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other]
-					if enemiesAtT[i,3] >= enemiesAtT[e, 3]
-						dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other)
-						print(" dxdy=(",dx,",",dy,")")
-						collision = true
-						# println("\t\t\ttemp=", temperature, ", T*1.1=", temperature * 1.1)
-						temperature = min(temperature * 1.7, 100)
-						# println("\t\t\ttemp=", temperature)
-					end
-	                break
-	            end
-	        end
-	    end
-	
-	    return dx, dy, temperature, collision
-	end
-
-	seed_value = 42  # You can choose any integer value
-	Random.seed!(seed_value)
-	
-	function gradient_ascend_avoidCollision(enemies, t)
-		enemiesAtT = copy(enemies)
-		enemiesAtT_m, _ = size(enemiesAtT)
-		surfacePlot = []
-		enem_T=fill(6.0, (n_enem, 1))
-		for ti in 1:t
-			for e in 1:enemiesAtT_m
-				print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
-				# println("\n\tT0(",e,")=", enem_T[e])
-				i, j = enemiesAtT[e, [1,2]]
-				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
-				r = enemiesAtT[e, 3]
-				# collision = false
-				# dx = ceil(slopeHere[1] * n/L)
-				# dy = ceil(slopeHere[2] * n/L)
-				
-				# dx = slopeHere[1]
-				# dy = slopeHere[2]
-
-				dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
-				
-				if ti>1
-					print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
-					# Check and adjust movement to avoid collision
-				    min_distance = 10 + r
-					dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
-					print("\n\t    coll?", collision)
-				end
-				
-				
-				if ti>1
-					metropolis = rand()
-					# Check Gibbs Boltzmann probability
-					if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
-						# print("\tmetropolis trip ", metropolis)
-	                    # Take the opposite direction
-	                    dx, dy = -dx, -dy
-						enem_T[e] = min(enem_T[e] * 1.01, 30)
-					end
-
-					print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
-
-					if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
-						if rand()<0.5
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
-						elseif rand()<1/3
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
-						elseif rand()<1/2
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
-						end
-					else
-						enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
-					end
-					if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
-						if rand()<0.5
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
-						elseif rand()<1/3
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
-						elseif rand()<1/2
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
-						end
-					else
-						enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
-					end
-							
-							
-					
-					# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
-					# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
-				else
-					println()
-				end
-				
-
-					enem_T[e] *= 0.95
-				if ti % 10 == 0
-				end
-					
-			end
-			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
-			
-			function colors_alias2(x, y)
-				return color(x, y, alt_p, A, enemiesInA)
-			end
-			
-			x = 1:n
-			y = 1:n
-			
-			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(plot_topo_gpu(topo, A)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
-		end
-		for e in 1:enemiesAtT_m
-			# println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
-		end
-		return surfacePlot
-	end
-	surfacePlot1 = gradient_ascend_avoidCollision(enemies, t)
-
-	PlutoPlotly.plot(surfacePlot1, layout)
-end
+# ╔═╡ 67af10fc-c749-4042-be11-983f648f52ce
+surfacePlot.layout[:scene]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoPlotly = "8e989ff0-3d88-8e9f-f020-2b208a939ff0"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [compat]
+CSV = "~0.10.11"
 CUDA = "~5.1.0"
 ColorTypes = "~0.11.4"
+DataFrames = "~1.6.1"
 DelimitedFiles = "~1.9.1"
+HTTP = "~1.10.0"
 LaTeXStrings = "~1.3.1"
 OffsetArrays = "~1.12.10"
 Plots = "~1.39.0"
@@ -998,7 +776,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "3d2c87486a7465851414911063c505136836f98d"
+project_hash = "66f24a1adbbd9f3a46d5468a28e7c699d93a962c"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1072,6 +850,12 @@ version = "1.0.8+0"
 git-tree-sha1 = "eb4cb44a499229b3b8426dcfb5dd85333951ff90"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.4.2"
+
+[[deps.CSV]]
+deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
+git-tree-sha1 = "44dbf560808d49041989b8a96cae4cffbeb7966a"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+version = "0.10.11"
 
 [[deps.CUDA]]
 deps = ["AbstractFFTs", "Adapt", "BFloat16s", "CEnum", "CUDA_Driver_jll", "CUDA_Runtime_Discovery", "CUDA_Runtime_jll", "Crayons", "DataFrames", "ExprTools", "GPUArrays", "GPUCompiler", "KernelAbstractions", "LLVM", "LLVMLoopInfo", "LazyArtifacts", "Libdl", "LinearAlgebra", "Logging", "NVTX", "Preferences", "PrettyTables", "Printf", "Random", "Random123", "RandomNumbers", "Reexport", "Requires", "SparseArrays", "Statistics", "UnsafeAtomicsLLVM"]
@@ -1255,6 +1039,12 @@ deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers",
 git-tree-sha1 = "466d45dc38e15794ec7d5d63ec03d776a9aff36e"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
 version = "4.4.4+1"
+
+[[deps.FilePathsBase]]
+deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
+git-tree-sha1 = "9f00e42f8d99fdde64d40c8ea5d14269a2e2c1aa"
+uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
+version = "0.9.21"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -2116,6 +1906,17 @@ git-tree-sha1 = "4528479aa01ee1b3b4cd0e6faef0e04cf16466da"
 uuid = "2381bf8a-dfd0-557d-9999-79630e7b1b91"
 version = "1.25.0+0"
 
+[[deps.WeakRefStrings]]
+deps = ["DataAPI", "InlineStrings", "Parsers"]
+git-tree-sha1 = "b1be2855ed9ed8eac54e5caff2afcdb442d52c23"
+uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
+version = "1.4.2"
+
+[[deps.WorkerUtilities]]
+git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
+uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
+version = "1.6.1"
+
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
 git-tree-sha1 = "24b81b59bd35b3c42ab84fa589086e19be919916"
@@ -2393,7 +2194,6 @@ version = "1.4.1+1"
 # ╠═4727903f-a54b-4d73-8998-fa99bb2481aa
 # ╠═9083379c-842e-4f7c-936f-1f9e66861af0
 # ╠═c8c9a170-7cc7-4bb3-b9dc-1654f4c2cefd
-# ╠═d83db108-12df-4094-990d-474accf6e976
 # ╟─df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 # ╠═4167489e-715b-4e62-8e56-3f2cd1317ccd
 # ╟─e5c741d7-7c52-4097-8d02-89d76495d53f
@@ -2412,14 +2212,14 @@ version = "1.4.1+1"
 # ╟─0f0779fa-d610-429f-acd3-ac82b7842b14
 # ╟─b1538261-175d-4892-ab3d-2963f239b8df
 # ╠═ba6660df-59b7-4c70-b30f-b8548d63b0d2
-# ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
+# ╟─8532f267-7e5f-45bb-8d82-6f86cfff7cc4
 # ╟─82d0e800-deb1-42fe-b1d3-2018d8639ff8
 # ╟─8f0937f0-813b-4256-a8b9-afb22e092a42
 # ╟─12351738-ddd3-4051-8880-504ecff343af
 # ╟─6d4076dc-68c8-42f8-a43e-222e3410bdbf
 # ╟─3750d105-df07-4af7-9143-82b065fbb041
 # ╠═1add5389-3a8b-40b7-b999-8df22bb45900
-# ╟─11f7bf70-4a39-451c-9bdb-9369742dcce0
+# ╠═11f7bf70-4a39-451c-9bdb-9369742dcce0
 # ╟─cb6482b5-c003-4ad2-8d8b-a60f3946b255
 # ╟─9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
 # ╠═2fff7da7-16ff-407d-92ef-24ee3469b9f4
@@ -2442,18 +2242,13 @@ version = "1.4.1+1"
 # ╠═a22d6084-18ed-4f71-886d-2ffc40ce599f
 # ╠═924c9d77-af8c-44b7-9053-b48aae4ad475
 # ╠═9f30ffe2-6546-480b-a89d-0f557469e82d
+# ╠═47eb3e53-a8b5-47a8-bfcd-9ad51bffbdc0
 # ╠═84bc9a37-dce3-40cf-85ae-b9107339aabe
-# ╠═8a586d49-86c9-4f7f-b438-15ba8181ed2c
-# ╠═37f3c01d-553e-498d-aea5-9e31b071f6e8
-# ╠═f00613ba-d962-4fe8-8763-98e5af6007a7
-# ╠═613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
-# ╟─a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
-# ╟─fa304120-14f9-4c1a-a430-0438db6743f3
 # ╠═282cd2e0-8b45-4625-af65-49f2167b1dc4
-# ╠═9c8dff1e-02bd-4acb-8771-389b5c708d05
-# ╠═6f603c0b-b852-473f-9099-b6292ad395b9
-# ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
-# ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
+# ╟─a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
+# ╠═fa304120-14f9-4c1a-a430-0438db6743f3
+# ╠═67af10fc-c749-4042-be11-983f648f52ce
+# ╠═fc5a9a4d-93bb-44de-8afa-99cfb6eac9e9
+# ╠═0c4c7e4a-29e9-44c1-8392-ee688dc150b0
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
