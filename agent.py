@@ -15,7 +15,7 @@ class Agent:
         self.gather = gather_sight
         self.env = None
         self.env_len = env_len            # length of environment 
-        self.discovered_enemy = list()    # for newly discovered enemies
+        self.new_enemy = list()    # for newly discovered enemies
         self.enemies_seen = list()        # for already analized enemies
         self.bushes = list()
         self.surr_field = None
@@ -187,7 +187,7 @@ class Agent:
                     if(self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j+1] != 'enemy' and self.surr_field[i][j-1] != 'enemy'):
                         self.set_corner(i,j,label=2)
 
-    def strategic_search(self, enemy_x, enemy_y):
+    def strategic_search(self):
         # Implement a search function when the enemy is detected
         # Will implement the spliting of the searching agent team
         # may need to define a new class
@@ -319,7 +319,7 @@ class Agent:
         # identify enemy ids also distinguish between new enemy and already analyzed enemy
         # return a list of nested tuples or empty list if there are no enemies
         # update enemies_seen list to keep track of them
-        # if new enemy is found update discovered_enemy
+        # if new enemy is found update new_enemy
         topy = max(0, self.y-self.view)
         boty = min(self.env_len, self.y+self.view+1)
         leftx = max(0, self.x-self.view)
@@ -330,11 +330,11 @@ class Agent:
                     if self.env.grid[i][j].uid in seen_enemies:
                         self.enemies_seen.append((i, j)) # mark as seen
                     else:    
-                        self.discovered_enemy.append((i, j)) # set new discovered enemy
+                        self.new_enemy.append((i, j)) # set new discovered enemy
         
-        if(self.discovered_enemy):
+        if(self.new_enemy):
             self.target = 1
-            (ei, ej) = self.discovered_enemy[0]
+            (ei, ej) = self.new_enemy[0]
             self.target_id = self.env.grid[ei][ej].uid
             if(ei >= self.x):
                 self.target_x = "right"
@@ -360,8 +360,16 @@ class Agent:
     def check_camp(self):
       if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
         #return the center of the rhombus
-        center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
-        return center_pos
+        if (self.enemy_end_1[0]-self.prevx)**2 +(self.enemy_end_2[1]-self.prevy)**2 >  (self.enemy_end_2[0]-self.prevx)**2 +(self.enemy_end_1[1]-self.prevy)**2:
+            center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
+        else:
+            center_pos = (self.enemy_end_2[0],self.enemy_end_1[1])
+        enemy_size = abs(self.enemy_end_1[0] - center_pos[0]) + abs(self.enemy_end_1[1] - center_pos[1])
+        return [center_pos, enemy_size]
       else: 
-        return None  
+        if (self.enemy_end_1[0]-self.x)**2 +(self.enemy_end_1[1]-self.y)**2 < (self.enemy_end_2[0]-self.x)**2 +(self.enemy_end_2[1]-self.y)**2:
+            self.enemy_end_2 = None
+        else:
+            self.enemy_end_1 = None
+        return [-1, -1]  
 
