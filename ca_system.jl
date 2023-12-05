@@ -288,61 +288,6 @@ md"Topography of the system"
 # ╔═╡ 6d4076dc-68c8-42f8-a43e-222e3410bdbf
 md"Topography contour"
 
-# ╔═╡ 1add5389-3a8b-40b7-b999-8df22bb45900
-begin
-	function plot_topo_kernel(topo, bushes, out, m, n)
-		i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
-		j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
-		if 1 <= i <= m && 1 <= j <= n
-			out[i, j] = topo[i,j] + bushes[i,j]*1
-		end
-		return
-	end
-	
-	function plot_topo_gpu(topo, bushes)
-	    m, n = size(topo)
-		# println(topo)
-		# println("Sizes of m, n = ", m, " ",n)
-		# println(min(max_threads, m))
-		topo_gpu = CuArray(topo)
-		bushes_gpu = CuArray(bushes)
-		output = similar(topo_gpu)
-		if !isnothing(max_threads) 
-			if !isnothing(m)
-				threads_x = min(max_threads, m)
-			else
-				threads_x = max_threads
-			end
-		else
-			if !isnothing(m)
-				threads_x = min(32, m)
-			else
-				threads_x = 26
-			end
-		end
-		if !isnothing(max_threads) 
-			if !isnothing(n)
-				threads_y = min(max_threads, n)
-			else
-				threads_y = max_threads
-			end
-		else
-			if !isnothing(n)
-				threads_y = min(32, n)
-			else
-				threads_y = 26
-			end
-		end
-	    blocks_x = ceil(Int, m / threads_x)
-	    blocks_y = ceil(Int, n / threads_y)
-		
-	 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) plot_topo_kernel(topo_gpu, bushes_gpu, output, m, n)
-	    
-	    return collect(output)
-	end
-	md"Kernel and GPU handler for superposing bushes onto the topography"
-end
-
 # ╔═╡ 11f7bf70-4a39-451c-9bdb-9369742dcce0
 md"Random Seed, $(@bind seed NumberField(0:1000, default=758))"
 
@@ -404,12 +349,6 @@ end
 
 # ╔═╡ 9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
 md"Topography superposed with vegetation looks like this"
-
-# ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
-begin
-	plotly()
-	surface_plot = Plots.plot(1:n, 1:n,plot_topo_gpu(topo, A), st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
-end
 
 # ╔═╡ 08c8c238-8a24-4743-aed5-0e2649758b61
 md"### Slopes"
@@ -599,13 +538,86 @@ begin
 	md"Definition of neighbourhood function that returns a von neumann neighbourhood set"
 end
 
+# ╔═╡ 1add5389-3a8b-40b7-b999-8df22bb45900
+begin
+	function topo_bush_kernel(topo, bushes, out, m, n)
+		i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+		j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+		if 1 <= i <= m && 1 <= j <= n
+			out[i, j] = topo[i,j] + bushes[i,j]*1
+		end
+		return
+	end
+	
+	function topo_bush_gpu(topo, bushes, enemies=nothing, preceedEnemies=false)
+	    m, n = size(topo)
+		# println(topo)
+		# println("Sizes of m, n = ", m, " ",n)
+		# println(min(max_threads, m))
+		topo_gpu = CuArray(topo)
+		bushes_gpu = CuArray(bushes)
+		output_gpu = similar(topo_gpu)
+		if !isnothing(max_threads) 
+			if !isnothing(m)
+				threads_x = min(max_threads, m)
+			else
+				threads_x = max_threads
+			end
+		else
+			if !isnothing(m)
+				threads_x = min(32, m)
+			else
+				threads_x = 26
+			end
+		end
+		if !isnothing(max_threads) 
+			if !isnothing(n)
+				threads_y = min(max_threads, n)
+			else
+				threads_y = max_threads
+			end
+		else
+			if !isnothing(n)
+				threads_y = min(32, n)
+			else
+				threads_y = 26
+			end
+		end
+	    blocks_x = ceil(Int, m / threads_x)
+	    blocks_y = ceil(Int, n / threads_y)
+		
+	 	@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) topo_bush_kernel(topo_gpu, bushes_gpu, output_gpu, m, n)
+
+		output = collect(output_gpu)
+
+		if !isnothing(enemies) && preceedEnemies
+			enemies_m, _ = size(enemies)
+			for e in 1:enemies_m
+				for nh in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
+					Y, X = enemies[e, 1] * Int(n/L) + nh[1], enemies[e, 2] * Int(n/L) + nh[2]
+					output[X, Y] = topo[X, Y]
+				end
+			end
+		end
+	    
+	    return output
+	end
+	md"Kernel and GPU handler for superposing bushes onto the topography"
+end
+
+# ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
+begin
+	plotly()
+	surface_plot = Plots.plot(1:n, 1:n,topo_bush_gpu(topo, A, enemies, true), st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
+end
+
 # ╔═╡ 86078a29-e2a6-470b-8757-b2efe2bf9eb8
 md"Let's attempt to plot the enemies just like how we plotted bushes"
 
 # ╔═╡ feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
 begin
 
-	topo_bush_enemies = plot_topo_gpu(topo, A)
+	topo_bush_enemies = topo_bush_gpu(topo, A)
 	m, _ = size(enemies)
 	for e in 1:m
 		for nh in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
@@ -637,11 +649,11 @@ begin
 		z=0.0
 		m, _ = size(alt_ps)
 		norm = 0
-
-		if(A[j, i]!=0)
-			return -10
-		elseif (enemiesInA[i, j]!=0)
+		
+		if (enemiesInA[i, j]!=0)
 			return max_height+10
+		elseif(A[j, i]!=0)
+			return -10
 		end
 		for k in 1:m
 			d = ((alt_ps[k, 1] - i)^2 + (alt_ps[k, 2] - j)^2)^0.5
@@ -680,7 +692,7 @@ begin
 	x = 1:n
 	y = 1:n
 	
-	Plots.surface(x = x, y = y, plot_topo_gpu(topo, A), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
+	Plots.surface(x = x, y = y, topo_bush_gpu(topo, A, enemies, true), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
 end
 
 # ╔═╡ 924c9d77-af8c-44b7-9053-b48aae4ad475
@@ -696,10 +708,10 @@ begin
 			alt_ps_m, _ = size(alt_p_gpu)
 			norm = 0
 	
-			if(A_gpu[i, j]!=0)
-				colors_A_gpu[i, j] = -10
-			elseif (enemiesInA_gpu[j, i]!=0)
+			if (enemiesInA_gpu[j, i]!=0)
 				colors_A_gpu[i, j] = max_height+10
+			elseif(A_gpu[i, j]!=0)
+				colors_A_gpu[i, j] = -10
 			else
 				flag = 1
 				for k in 1:alt_ps_m
@@ -829,7 +841,7 @@ begin
 			y = 1:n
 			
 		end
-			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(plot_topo_gpu(topo, A)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemies, true)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
 		for e in 1:enemiesAtT_m
 			println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
 		end
@@ -1046,7 +1058,7 @@ begin
 			# Update the surface plot for visualization
 			x = 1:n
 			y = 1:n
-			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(plot_topo_gpu(topo, A)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemiesAtT, true)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
 		end
 		# for e in 1:enemiesAtT_m
 			# println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
@@ -1057,6 +1069,9 @@ begin
 
 	PlutoPlotly.plot(surfacePlot1, layout)
 end
+
+# ╔═╡ 1cd0c84c-2cca-4251-b718-822477ab0b31
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2518,8 +2533,8 @@ version = "1.4.1+1"
 # ╟─08c8c238-8a24-4743-aed5-0e2649758b61
 # ╟─81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
-# ╠═15f17206-db9f-4896-9e32-93d025501917
-# ╠═230af3ed-9267-497c-a697-e422bcf04665
+# ╟─15f17206-db9f-4896-9e32-93d025501917
+# ╟─230af3ed-9267-497c-a697-e422bcf04665
 # ╟─c2a9fa1f-a405-4767-aec2-42196a70cc61
 # ╟─73014c35-ab99-47e2-bfcb-9076c0720bdf
 # ╟─daf19ff1-0012-4b12-b61f-1d9517178bf5
@@ -2540,12 +2555,13 @@ version = "1.4.1+1"
 # ╠═f00613ba-d962-4fe8-8763-98e5af6007a7
 # ╠═613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
 # ╟─a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
-# ╟─fa304120-14f9-4c1a-a430-0438db6743f3
+# ╠═fa304120-14f9-4c1a-a430-0438db6743f3
 # ╠═282cd2e0-8b45-4625-af65-49f2167b1dc4
 # ╠═9c8dff1e-02bd-4acb-8771-389b5c708d05
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
 # ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
 # ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╟─6d80d171-2ef7-4646-a289-cdeea175221e
+# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
+# ╠═1cd0c84c-2cca-4251-b718-822477ab0b31
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
