@@ -14,7 +14,7 @@ class Agent:
         self.view = view_sight
         self.gather = gather_sight
         self.env = None
-        self.env_len = env_len
+        self.env_len = env_len            # length of environment 
         self.discovered_enemy = list()    # for newly discovered enemies
         self.enemies_seen = list()        # for already analized enemies
         self.bushes = list()
@@ -193,28 +193,28 @@ class Agent:
         # may need to define a new class
         cell_list = self.get_enemy_cells()
         [dist, eu_dist, ei, ej] = self.get_enemy_distance(cell_list)
-        if(dist > 5):
+        if(dist > self.gather):
             if(ei >= self.x):
                 self.target_x = "right"
-                if(ei > self.x+5):
+                if(ei > self.x+self.gather):
                     self.move_x = "right"
                 else:
                     self.move_x = ""
             else:
                 self.target_x = "left"
-                if(ei < self.x-5):
+                if(ei < self.x-self.gather):
                     self.move_x = "left"
                 else:
                     self.move_x = ""
             if(ej >= self.y):
                 self.target_y = "up"
-                if(ej > self.y+5):
+                if(ej > self.y+self.gather):
                     self.move_y = "up"
                 else:
                     self.move_y = ""
             else:
                 self.target_y = "down"
-                if(ej < self.y-5):
+                if(ej < self.y-self.gather):
                     self.move_y = "down"
                 else:
                     self.move_y = ""
@@ -353,6 +353,15 @@ class Agent:
         # Implement function to get surrounging information from the Environemt Class for bushes and enemies present
         self.surr_field = self.env.get_surrounding(self.x, self.y, self.view)
         self.find_bushes()
-        self.find_enemy(seen_enemies=self.enemies_seen)
+        
         # need to set self.surr_field as a slice of the total environment
         # centered around current cell
+   
+    def check_camp(self):
+      if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
+        #return the center of the rhombus
+        center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
+        return center_pos
+      else: 
+        return None  
+
