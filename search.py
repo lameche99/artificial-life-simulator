@@ -26,7 +26,7 @@ class SearchModel:
         y = np.random.randrange(self.len)
         return x, y
 
-    def step(agents, grid):
+    def step(agents, grid, seen_enemies):
         new_agents_positions = [] 
         for agent in agents:
             # If you have an Environment class, uncomment the line below
@@ -60,7 +60,7 @@ class SearchModel:
             agent.x, agent.y = new_position[0], new_position[1]
             new_agents_positions.append([agent.x, agent.y])
             #  self.env.move_agent(agent, new_position[0], new_position[1])
-        return new_agents_positions
+        return new_agents_positions, seen_enemies
 
 
 """
