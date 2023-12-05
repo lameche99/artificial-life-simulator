@@ -49,21 +49,26 @@ class SearchModel:
                     new_position = agent.random_search()
                 # if there are non-detected enemies implement strategic search for the first in the list
                 # regardless of how many there are
-                print(f'New enemy detected at ({enemies[0][1], enemies[0][0]}). Performing Strategic Search')
-                new_position = agent.strategic_search(enemies[0][1], enemies[0][0])   # also implement function to check if both the enemey corner are set
-
+                else:
+                  enemy_pos = {enemies[0][1], enemies[0][0]}; 
+                  print(f'New enemy detected at ({enemies[0][1], enemies[0][0]}). Performing Strategic Search')
+                  new_position = agent.strategic_search(enemies[0][1], enemies[0][0])   # also implement function to check if both the enemey corner are set
+                  enemy_center_pos = agent.check_camp()
+                  if enemy_center_pos==None:
+                    #TODO agent.strategic_search()
+                    pass
+                  else:
+                    self.seen_enemies.append(enemy_center_pos)  
                 # if both enemy cornnrs are st and in are in a digonal, print enemy location # after computing its center
                 # else delete the old corner location and again search for the new location since the enemy has modes 
-            
-            elif seen == 1: # only one enemy
-                if enemies[0] in agent.enemies_seen:
-                    # if enemy has already been detected what to do?
-                    print('All enemies already detected. Performing Random Search.')
-                    new_position = agent.random_search()
-                print(f'New enemy detected at ({enemies[0][1], enemies[0][0]}), discovering.')
-                # if the enemy was not detected already implement strategic search
-                new_position = agent.strategic_search(enemies[0][1], enemies[0][0])
-            
+            # elif seen == 1: # only one enemy
+            #     if enemies[0] in agent.enemies_seen:
+            #         # if enemy has already been detected what to do?
+            #         print('All enemies already detected. Performing Random Search.')
+            #         new_position = agent.random_search()
+            #     print(f'New enemy detected at ({enemies[0][1], enemies[0][0]}), discovering.')
+            #     # if the enemy was not detected already implement strategic search
+            #     new_position = agent.strategic_search(enemies[0][1], enemies[0][0])
             else: # no enemies detected perform random search
                 print('No enemies detected. Performing Random Search.')
                 new_position = agent.random_search()
