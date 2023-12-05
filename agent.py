@@ -1,5 +1,4 @@
 from environment import Environment
-import random
 import numpy as np
 
 class Agent:
@@ -75,7 +74,7 @@ class Agent:
         # Filter out moves that correspond to bushes (since bushes are not in enemy-camps)
         valid_moves = [move for move in valid_moves if move not in self.bushes]
 
-        return random.choice(valid_moves) if valid_moves else (self.x, self.y)
+        return np.random.choice(valid_moves) if valid_moves else (self.x, self.y)
     
     def get_enemy_cells(self):
         id = self.target_id
@@ -221,7 +220,7 @@ class Agent:
             bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
             eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
             self.target_dist = -1
-            return random.choice(eff_bushes) if eff_bushes else (random.choice(bush_around) if bush_around else (self.x, self.y))
+            return np.random.choice(eff_bushes) if eff_bushes else (np.random.choice(bush_around) if bush_around else (self.x, self.y))
         
         else:
             self.check_corner()    
@@ -238,7 +237,7 @@ class Agent:
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.target_x, self.target_y)]
                 opt_bushes = [bush for bush in bush_around if self.opt_region(bush, x_pseudo, self.y, self.move_x, self.move_y, label = 1)]
-                return random.choice(opt_bushes) if opt_bushes else (random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
+                return np.random.choice(opt_bushes) if opt_bushes else (np.random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
             else:
                 self.move_x = self.target_x
                 self.move_y = self.invert(self.target_y)
@@ -251,7 +250,7 @@ class Agent:
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
                 opt_bushes = [bush for bush in bush_around if (bush in reg)]
-                return random.choice(opt_bushes) if opt_bushes else (random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
+                return np.random.choice(opt_bushes) if opt_bushes else (np.random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
 
     def get_region(self, x, y, move_x, move_y, label):
         if (label==2):

@@ -1,5 +1,5 @@
 
-import random
+
 import numpy as np
 from agent import Agent
 from environment import Environment
@@ -23,8 +23,8 @@ class SearchModel:
         #     self.agents.append(agent)
 
     def random_position(self):
-        x = random.randrange(self.len)
-        y = random.randrange(self.len)
+        x = np.random.randrange(self.len)
+        y = np.random.randrange(self.len)
         return x, y
 
     def step(self):
