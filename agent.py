@@ -17,7 +17,6 @@ class Agent:
         self.new_enemy = list()    # for newly discovered enemies
         self.enemies_seen = list()        # for already analized enemies
         self.bushes = list()
-        self.surr_field = None
         self.target = 0      # flag is agent is following an enemy
         self.target_id = None  # id of the enemy follwing
         self.target_dist = -1 
@@ -85,8 +84,8 @@ class Agent:
         rightx = min(self.env_len, self.x+self.view+1)
         for i in range(topy, boty):
             for j in range(leftx, rightx):
-                if (not self.env.grid[i][j] is None) and (self.env.grid[i][j].type_ == 'enemy'): # change with enemy label in environment
-                    if self.env.grid[i][j].uid == id:
+                if (self.env[i][j][0] == 2): # change with enemy label in environment
+                    if self.env[i][j][1] == id:
                         cell_list.append((i, j))
         return cell_list
     
@@ -172,18 +171,18 @@ class Agent:
     def check_corner(self):
         for i in range(max(0,self.x-self.gather), min(self.env_len, self.x+self.gather+1)):
             for j in range(max(0,self.y-self.gather), min(self.env_len, self.y+self.gather+1)):
-                if self.surr_field[i][j] == 'enemy' and self.env.enemy_id(i,j) == self.target_id:
+                if self.env[i][j][0] == 2 and self.env[i][j][1] == self.target_id:
                     if(i==0 or i==self.env_len-1):
                         self.set_corner(i,j,label=2)
                     if(j==0 or j==self.env_len-1):
                         self.set_corner(i,j,label=1)
-                    if(self.surr_field[i-1][j] != 'enemy' and self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j-1] != 'enemy'):
+                    if(self.env[i-1][j][0] != 2 and self.env[i+1][j][0] != 2 and self.env[i][j-1][0] != 2):
                         self.set_corner(i,j,label=1)
-                    if(self.surr_field[i-1][j] != 'enemy' and self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j+1] != 'enemy'):
+                    if(self.env[i-1][j][0] != 2 and self.env[i+1][j][0] != 2 and self.env[i][j+1][0] != 2):
                         self.set_corner(i,j,label=1)
-                    if(self.surr_field[i-1][j] != 'enemy' and self.surr_field[i][j-1] != 'enemy' and self.surr_field[i][j+1] != 'enemy'):
+                    if(self.env[i-1][j][0] != 2 and self.env[i][j-1][0] != 2 and self.env[i][j+1][0] != 2):
                         self.set_corner(i,j,label=2)
-                    if(self.surr_field[i+1][j] != 'enemy' and self.surr_field[i][j+1] != 'enemy' and self.surr_field[i][j-1] != 'enemy'):
+                    if(self.env[i+1][j][0] != 2 and self.env[i][j+1][0] != 2 and self.env[i][j-1][0] != 2):
                         self.set_corner(i,j,label=2)
 
     def strategic_search(self):
@@ -309,7 +308,7 @@ class Agent:
         rightx = min(self.env_len, self.x+self.view+1)
         for i in range(topy, boty):
             for j in range(leftx, rightx):
-                if self.env.grid[i][j] == 'bush': # change with bush label in environment
+                if self.env[i][j][0] == 1: # change with bush label in environment
                     bushes.append((j, i))
         self.bushes = bushes
 
@@ -325,8 +324,8 @@ class Agent:
         rightx = min(self.env_len, self.x+self.view+1)
         for i in range(topy, boty):
             for j in range(leftx, rightx):
-                if (not self.env.grid[i][j] is None) and (self.env.grid[i][j].type_ == 'enemy'): # change with enemy label in environment
-                    if self.env.grid[i][j].uid in seen_enemies:
+                if (self.env[i][j][0] == 2): # change with enemy label in environment
+                    if self.env[i][j][1] in seen_enemies:
                         self.enemies_seen.append((i, j)) # mark as seen
                     else:    
                         self.new_enemy.append((i, j)) # set new discovered enemy
@@ -334,7 +333,7 @@ class Agent:
         if(self.new_enemy):
             self.target = 1
             (ei, ej) = self.new_enemy[0]
-            self.target_id = self.env.grid[ei][ej].uid
+            self.target_id = self.env[ei][ej][1]
             if(ei >= self.x):
                 self.target_x = "right"
                 self.move_x = "right"
@@ -348,11 +347,9 @@ class Agent:
                 self.target_y = "down"
                 self.move_y = "down"
 
-    def scan_surrounding(self):
+    def scan_surrounding(self, env):
         # Implement function to get surrounging information from the Environemt Class for bushes and enemies present
-        self.surr_field = self.env.get_surrounding(self.x, self.y, self.view)
-        self.find_bushes()
-        
+        self.env = env
         # need to set self.surr_field as a slice of the total environment
         # centered around current cell
    

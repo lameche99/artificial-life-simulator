@@ -6,12 +6,11 @@ from environment import Environment
 
 
 class SearchModel:
-    def __init__(self, environment_len, num_agents, env: Environment):
+    def __init__(self, environment_len, agents, env: np.array):
         self.len = environment_len
-        n = self.len
-        self.field = np.zeros((n, n))
+        self.field = np.zeros((self.len, self.len))
         self.env = env
-        self.agents = []
+        self.agents = agents
         self.seen_enemies = list()   # store ids of already analyzed enemies
 
         # Assuming you have an Environment instance
@@ -27,33 +26,31 @@ class SearchModel:
         y = np.random.randrange(self.len)
         return x, y
 
-    def step(self):
+    def step(agents, grid):
         new_agents_positions = [] 
-        for agent in self.env.agents:
+        for agent in agents:
             # If you have an Environment class, uncomment the line below
             # surrounding_info = self.environment.get_surrounding_info(agent.x, agent.y, agent)
 
-            agent.scan_surrounding()
+            agent.scan_surrounding(grid)
 
-            bushes = agent.bushes # list of bush coordinates in field of vision
-            agent.find_enemy(seen_enemies=self.seen_enemies)
+            bushes = agent.find_bushes()# list of bush coordinates in field of vision
+            agent.find_enemy(seen_enemies=seen_enemies)
             enemies = agent.new_enemy # list of enemy coordinates in current field of vision
-            seen = len(enemies)
-            print(f'Starting position: ({agent.x}, {agent.y})')
 
             if len(enemies):
                 if(agent.target != 1):
                     enemy_pos = [enemies[0][0], enemies[0][1]]
                     print('New enemy detected at ({},{}). Performing Strategic Search'.format(enemy_pos[0],enemy_pos[1]))
                     agent.target = 1
-                    agent.target_id = self.env.grid[enemies[0][0]][enemies[0][0]].uid   # to be changes according to environment code
-                elif(agent.target_id not in self.seen_enemies):
+                    agent.target_id = grid[enemies[0][0]][enemies[0][0]][1]  # to be changes according to environment code
+                elif(agent.target_id not in seen_enemies):
                     new_position = agent.strategic_search()
                     [enemy_center_pos, enemy_size] = agent.check_camp()
                     if enemy_center_pos==-1:
                         new_position = agent.strategic_search()
                     else:
-                        self.seen_enemies.append(enemy_center_pos)  
+                        seen_enemies.append(enemy_center_pos)  
                         print("Enemy discovered with centre at ({}, {}) and of the size of {}".format(enemy_center_pos[0], enemy_center_pos[1], enemy_size))
 
             else:
