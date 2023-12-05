@@ -356,3 +356,12 @@ class Agent:
         
         # need to set self.surr_field as a slice of the total environment
         # centered around current cell
+   
+    def check_camp(self):
+      if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
+        #return the center of the rhombus
+        center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
+        return center_pos
+      else: 
+        return None  
+
