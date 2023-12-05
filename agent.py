@@ -73,7 +73,16 @@ class Agent:
         # Filter out moves that correspond to bushes (since bushes are not in enemy-camps)
         valid_moves = [move for move in valid_moves if move not in self.bushes]
 
-        return np.random.choice(valid_moves) if valid_moves else (self.x, self.y)
+        # length of valid moves
+        num_valid_moves = len(valid_moves)
+        if(num_valid_moves==0):
+            return (self.x, self.y)
+        #generate a random number between 0 and num_valid_moves-1
+        random_index = np.random.randint(0, num_valid_moves-1)
+        # return the move at the random index
+        return valid_moves[random_index] if valid_moves else (self.x, self.y)
+        
+        # return np.random.choice(np.array(valid_moves).ravel()) if valid_moves else (self.x, self.y)
     
     def get_enemy_cells(self):
         id = self.target_id
@@ -368,4 +377,7 @@ class Agent:
         else:
             self.enemy_end_1 = None
         return [-1, -1]  
+    
+    def print_pos(self):
+        print("Agent {} is at ({}, {})".format(self.unique_id, self.x, self.y))
 
