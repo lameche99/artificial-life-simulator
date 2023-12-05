@@ -46,10 +46,13 @@ begin
 end
 
 # ╔═╡ d83db108-12df-4094-990d-474accf6e976
-md"Max Threads, $(@bind max_threads NumberField(1:32, default=32))"
+md"Max Threads, $(@bind max_threads NumberField(1:32, default=26))"
 
 # ╔═╡ df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
 md"## Initial State"
+
+# ╔═╡ e633b8e0-3774-462f-9d6e-1f586a17730a
+md"Bush density, $(@bind b_density NumberField(1:100, default=3))"
 
 # ╔═╡ e5c741d7-7c52-4097-8d02-89d76495d53f
 function neighbour_sum(A, pos)
@@ -347,7 +350,7 @@ md"Random Seed, $(@bind seed NumberField(0:1000, default=758))"
 begin
 	Random.seed!(seed)
 	# sample code for a 2D array
-	A_L = rand(Float64, L, L) .< 0.03
+	A_L = rand(Float64, L, L) .< (b_density/100)
 	A = zeros(n, n)
 
 	for i in 1:n
@@ -995,7 +998,7 @@ begin
 					if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
 						# print("\tmetropolis trip ", metropolis)
 						
-	                    # Take the opposite direction
+	                    # Take the direction which reduces altitude
 	                    dx, dy = -dx, -dy
 						enem_T[e] = min(enem_T[e] * 1.01, 30)
 					end
@@ -2483,6 +2486,7 @@ version = "1.4.1+1"
 # ╠═c8c9a170-7cc7-4bb3-b9dc-1654f4c2cefd
 # ╠═d83db108-12df-4094-990d-474accf6e976
 # ╟─df27f8a4-f258-43b4-acdc-b8ea0f9ffc88
+# ╠═e633b8e0-3774-462f-9d6e-1f586a17730a
 # ╠═4167489e-715b-4e62-8e56-3f2cd1317ccd
 # ╟─e5c741d7-7c52-4097-8d02-89d76495d53f
 # ╟─29fb1a62-86bf-4bab-bb7e-dbbfd5024917
@@ -2542,6 +2546,6 @@ version = "1.4.1+1"
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
 # ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
 # ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
+# ╟─6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

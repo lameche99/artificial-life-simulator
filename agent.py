@@ -9,8 +9,8 @@ class Agent:
         self.y = y                        # new position
         self.prevx = -1                   # one step previous position
         self.prevy = -1
-        self.pattern_index = 0
-        self.type_ = type_
+        #self.pattern_index = 0
+        # self.type_ = type_
         self.view = view_sight
         self.gather = gather_sight
         self.env = None
