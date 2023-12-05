@@ -12,7 +12,7 @@ class SearchModel:
         self.field = np.zeros((n, n))
         self.env = env
         self.agents = []
-        seen_enemies = list()   # store ids of already analyzed enemies
+        self.seen_enemies = list()   # store ids of already analyzed enemies
 
         # Assuming you have an Environment instance
 
@@ -28,6 +28,7 @@ class SearchModel:
         return x, y
 
     def step(self):
+        new_agents_positions = [] 
         for agent in self.env.agents:
             # If you have an Environment class, uncomment the line below
             # surrounding_info = self.environment.get_surrounding_info(agent.x, agent.y, agent)
@@ -36,9 +37,36 @@ class SearchModel:
 
             bushes = agent.bushes # list of bush coordinates in field of vision
             agent.find_enemy(seen_enemies=self.seen_enemies)
-            enemies = agent.discovered_enemy # list of enemy coordinates in current field of vision
+            enemies = agent.new_enemy # list of enemy coordinates in current field of vision
             seen = len(enemies)
             print(f'Starting position: ({agent.x}, {agent.y})')
+
+            if len(enemies):
+                if(agent.target != 1):
+                    enemy_pos = [enemies[0][0], enemies[0][1]]
+                    print('New enemy detected at ({},{}). Performing Strategic Search'.format(enemy_pos[0],enemy_pos[1]))
+                    agent.target = 1
+                    agent.target_id = self.env.grid[enemies[0][0]][enemies[0][0]].uid   # to be changes according to environment code
+                elif(agent.target_id not in self.seen_enemies):
+                    new_position = agent.strategic_search()
+                    [enemy_center_pos, enemy_size] = agent.check_camp()
+                    if enemy_center_pos==-1:
+                        new_position = agent.strategic_search()
+                    else:
+                        self.seen_enemies.append(enemy_center_pos)  
+                        print("Enemy discovered with centre at ({}, {}) and of the size of {}".format(enemy_center_pos[0], enemy_center_pos[1], enemy_size))
+
+            else:
+                new_position = agent.random_search()
+            
+            agent.prevx, agent.prevy = agent.x, agent.y 
+            agent.x, agent.y = new_position[0], new_position[1]
+            new_agents_positions.append([agent.x, agent.y])
+            #  self.env.move_agent(agent, new_position[0], new_position[1])
+        return new_agents_positions
+
+
+"""
             if seen > 1: # if multiple enemies in the field of vision
                 # remove already seen enemies from list to focus on new ones
                 for i in range(seen):
@@ -55,7 +83,7 @@ class SearchModel:
                   new_position = agent.strategic_search(enemies[0][1], enemies[0][0])   # also implement function to check if both the enemey corner are set
                   enemy_center_pos = agent.check_camp()
                   if enemy_center_pos==None:
-                    #TODO agent.strategic_search()
+                    #TO DO agent.strategic_search()
                     pass
                   else:
                     self.seen_enemies.append(enemy_center_pos)  
@@ -79,3 +107,4 @@ class SearchModel:
 
 
             # fu
+"""
