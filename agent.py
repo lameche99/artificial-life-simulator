@@ -388,20 +388,23 @@ class Agent:
         # centered around current cell
    
     def check_camp(self):
-      if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
-        #return the center of the rhombus
-        if (self.enemy_end_1[0]-self.prevx)**2 +(self.enemy_end_2[1]-self.prevy)**2 >  (self.enemy_end_2[0]-self.prevx)**2 +(self.enemy_end_1[1]-self.prevy)**2:
-            center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
-        else:
-            center_pos = (self.enemy_end_2[0],self.enemy_end_1[1])
-        enemy_size = abs(self.enemy_end_1[0] - center_pos[0]) + abs(self.enemy_end_1[1] - center_pos[1])
-        return [center_pos, enemy_size]
-      else: 
-        if (self.enemy_end_1[0]-self.x)**2 +(self.enemy_end_1[1]-self.y)**2 < (self.enemy_end_2[0]-self.x)**2 +(self.enemy_end_2[1]-self.y)**2:
-            self.enemy_end_2 = None
-        else:
-            self.enemy_end_1 = None
-        return [-1, -1]  
+        if (self.enemy_end_1 is None) or (self.enemy_end_2 is None):
+            return [-1, -1]
+      
+        if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
+            #return the center of the rhombus
+            if (self.enemy_end_1[0]-self.prevx)**2 +(self.enemy_end_2[1]-self.prevy)**2 >  (self.enemy_end_2[0]-self.prevx)**2 +(self.enemy_end_1[1]-self.prevy)**2:
+                center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
+            else:
+                center_pos = (self.enemy_end_2[0],self.enemy_end_1[1])
+            enemy_size = abs(self.enemy_end_1[0] - center_pos[0]) + abs(self.enemy_end_1[1] - center_pos[1])
+            return [center_pos, enemy_size]
+        else: 
+            if (self.enemy_end_1[0]-self.x)**2 +(self.enemy_end_1[1]-self.y)**2 < (self.enemy_end_2[0]-self.x)**2 +(self.enemy_end_2[1]-self.y)**2:
+                self.enemy_end_2 = None
+            else:
+                self.enemy_end_1 = None
+            return [-1, -1]  
     
     def print_pos(self):
       return "Agent {} is at ({}, {})".format(self.unique_id, self.x, self.y)

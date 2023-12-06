@@ -58,7 +58,7 @@ class SearchModel:
             
             agent.prevx, agent.prevy = agent.x, agent.y 
             agent.x, agent.y = new_position[0], new_position[1]
-            new_agents_positions.append([agent.x, agent.y])
+            new_agents_positions.append([agent.unique_id, agent.x, agent.y])
             #  self.env.move_agent(agent, new_position[0], new_position[1])
         return new_agents_positions, seen_enemies
 
