@@ -156,54 +156,11 @@ function conway_gpu(A)
     return collect(B)
 end
 
-# ╔═╡ 2fe91b37-1c3f-49ce-bfa2-702a180b78a0
-begin
-	md"``X``, ``Y`` subdivisions, ``n`` = $(@bind n NumberField(0:100; default=100))"
-end
-
 # ╔═╡ 8327cfec-51df-4c38-839a-b7212ddb24e7
 md"``X_{\max}, Y_{\max}``, L = $(@bind L NumberField(0:100; default=100))"
 
 # ╔═╡ 701891a4-6a87-427e-af9b-487dec1dee4d
 md"Time of simulation, ``T_{\text{max}}``"
-
-# ╔═╡ 0f344406-4816-4cd6-ae8e-83a8b918fa11
-function next_pos(current_pos, B, seed)
-	i, j=current_pos
-
-	# # println("Seed = $seed")
-	# # Random.seed!(seed)
-	# d = rand(-1:1, (2,1))
-	
-	# println("d=$d")
-	# println("x0, y0= $(current_pos)")
-	# x, y=current_pos+d
-	# println("Old x, y= $([x, y])")
-
-	neighbors = [[-1,0],[0-1,0+1],[0,0+1],[0+1,0+1],[0+1,0],[0+1,0-1],[0,0-1],[0-1,0-1]]
-	direction = [0, 0]
-	for neighbor in neighbors
-		i_n, j_n = neighbor
-		direction += B[i_n+i, j_n+j]*[i_n, j_n]
-	end
-	# println("Direction=$direction")
-	direction[1] = sign(direction[1])*ceil(abs(direction[1])/8)
-	direction[2] = sign(direction[2])*ceil(abs(direction[2])/8)
-	direction = 1 * direction
-	# println("NormDirection=$direction")
-
-	if direction[1]==0 && direction[2]==0
-		direction = rand(-1:1, (2,1))
-	end
-	
-	x = i + direction[1]
-	y = j + direction[2]
-	
-	x=min(max(x, 1), n)
-	y=min(max(y, 1), n)
-	# println("New x, y= $([x, y])")
-	return [x, y]
-end
 
 # ╔═╡ 4ec0a200-78df-4cfd-9efe-105dad6f4ef3
 function encode_agent(agent_pos, B)
@@ -300,61 +257,8 @@ md"Topography contour"
 # ╔═╡ 11f7bf70-4a39-451c-9bdb-9369742dcce0
 md"Random Seed, $(@bind seed NumberField(0:1000, default=758))"
 
-# ╔═╡ 4167489e-715b-4e62-8e56-3f2cd1317ccd
-begin
-	Random.seed!(seed)
-	# sample code for a 2D array
-	A_L = rand(Float64, L, L) .< (b_density/100)
-	A = zeros(n, n)
-
-	for i in 1:n
-		for j in 1:n
-			A[i, j] = A_L[Int(ceil(i/(n/L))), Int(ceil(j/(n/L)))]
-		end
-	end
-	
-	
-	# use show_image to display the array A
-	show_image(A)
-	# show_image(A, [(0,0,0), (1,1,1)])
-end
-
-# ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
-begin
-	Random.seed!(seed)
-	alt_pos = rand(1:n, (altPs,2));
-	alt_h = rand(Float64, (altPs,1))*max_height;
-	hcat(alt_pos, alt_h)
-	alt_p = hcat(alt_pos, alt_h);
-	md"Generating random control points..."
-end
-
-# ╔═╡ b1538261-175d-4892-ab3d-2963f239b8df
-alt_p
-
 # ╔═╡ cb6482b5-c003-4ad2-8d8b-a60f3946b255
 md"Power to raise the distance to control point... $(@bind power NumberField(0:1000; default=3))"
-
-# ╔═╡ 8532f267-7e5f-45bb-8d82-6f86cfff7cc4
-begin
-	topo = zeros(Float64, n, n);
-	topo = topography_gpu(topo, alt_p, power)
-	md"Let's define the topography using the control points"
-	# plotly()
-	# show_image(topo, :grays)
-end
-
-# ╔═╡ 12351738-ddd3-4051-8880-504ecff343af
-begin
-	plotly()
-	Plots.plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n],xlabel="X", ylabel="Y", zlabel="Z")
-end
-
-# ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
-begin
-	plotly()
-	Plots.contour(1:n, 1:n,topo, levels=60, xlim=[0,n], ylim=[0,n], ratio=1, fill=true)
-end
 
 # ╔═╡ 9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
 md"Topography superposed with vegetation looks like this"
@@ -474,21 +378,6 @@ begin
 	md"Kernel and method to generate topography slopes using central differences"
 end
 
-# ╔═╡ 230af3ed-9267-497c-a697-e422bcf04665
-begin
-	dx, dy = slope_gpu(topo);
-	
-	slope = [(dx[i, j], dy[i, j]) for i in 1:n, j in 1:n];
-	md"Calculating the slope with a double central difference method"
-end
-
-# ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
-begin
-	using DelimitedFiles;
-	writedlm("slope.txt", slope);
-	md"Let's write the slopes into a txt file for debugging"
-end
-
 # ╔═╡ 73014c35-ab99-47e2-bfcb-9076c0720bdf
 md"## Enemies & Hill Climb... racing?"
 
@@ -506,20 +395,6 @@ md"Set climbable slope to... $(@bind max_slope NumberField(1:10, default=7))%"
 
 # ╔═╡ e9055da6-3c24-4fe9-919c-1040916c79c3
 md"Let there be... $(@bind n_enem NumberField(1:10, default=4)) enemy clusters"
-
-# ╔═╡ be20aaf3-473e-4be5-adcc-3db9eb3de213
-begin
-	Random.seed!(seed)
-	enem_pos = rand(1:L, (n_enem,2));
-	enem_z = [topo[row[1], row[2]] for row in eachrow(enem_pos)]
-	# enem_T = fill(1.0, (n_enem,1)) # temperature
-	enem_r = rand(1:3, (n_enem,1));
-	enemies = hcat(enem_pos, enem_r);
-	md"Generating random enemy clusters. The look like so..."
-end
-
-# ╔═╡ cb0bb5cd-a02b-457d-b47a-be623e8d50ed
-enemies
 
 # ╔═╡ 477ae165-07d6-4a64-8ce4-8c4b4c25011e
 begin
@@ -614,95 +489,13 @@ begin
 	md"Kernel and GPU handler for superposing bushes onto the topography"
 end
 
-# ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
-begin
-	plotly()
-	surface_plot = Plots.plot(1:n, 1:n,topo_bush_gpu(topo, A, enemies, true), st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
-end
-
 # ╔═╡ 86078a29-e2a6-470b-8757-b2efe2bf9eb8
 md"Let's attempt to plot the enemies just like how we plotted bushes"
-
-# ╔═╡ feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
-begin
-
-	topo_bush_enemies = topo_bush_gpu(topo, A)
-	m, _ = size(enemies)
-	for e in 1:m
-		for nh in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
-			topo_bush_enemies[enemies[e, 1] * Int(n/L) + nh[1], enemies[e, 2] * Int(n/L) + nh[2]]+=2
-		end
-	end
-	Plots.plot(1:n, 1:n,topo_bush_enemies, st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
-end
 
 # ╔═╡ c0bc8f94-9636-461a-9b34-fe0ccfefcb69
 md"That doesn't look so great now, does it?
 
 Let's plot the agents along with the bushes in a more beautiful manner. Green represents bushes and white for enemies."
-
-# ╔═╡ a22d6084-18ed-4f71-886d-2ffc40ce599f
-begin
-	function gen_e_in_A(enemies, n, L)
-		enemiesInA = zeros(n, n)
-		for e in 1:size(enemies)[1]
-			for nh in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
-				enemiesInA[enemies[e, 1] * Int(n/L) + nh[1], enemies[e, 2] * Int(n/L) + nh[2]] = 1
-			end
-		end
-		return enemiesInA
-	end
-	enemiesInA = gen_e_in_A(enemies, n, L)
-	
-	function color(i, j, alt_ps, A, enemiesInA)
-		z=0.0
-		m, _ = size(alt_ps)
-		norm = 0
-		
-		if (enemiesInA[i, j]!=0)
-			return max_height+10
-		elseif(A[j, i]!=0)
-			return -10
-		end
-		for k in 1:m
-			d = ((alt_ps[k, 1] - i)^2 + (alt_ps[k, 2] - j)^2)^0.5
-			if (d > 0)
-				z += alt_ps[k, 3]/d^power
-				norm += 1/d^power
-			else
-				z = alt_ps[k, 3]
-				return z
-			end
-		end
-		z /= norm
-		# println(typeof(z))
-		return z
-	end
-
-	min_v = 10/(max_height+20)
-	max_v = (max_height+10)/(max_height+20)
-	custom_colorscale = [
-	    (0.00, "#3bff00"),  # Green
-	    (min_v - 0.000000001, "#3bff00"),  # Green
-	    (min_v, "#222224"),  # Blue
-	    (min_v + 1*(max_v-min_v)/5, "#3E2163"),  # Blue
-		(min_v + 2*(max_v-min_v)/5, "#88236A"),# Yellow
-		(min_v + 3*(max_v-min_v)/5, "#D04544"),# Yellow
-		(min_v + 4*(max_v-min_v)/5, "#F78D1E"),# Yellow
-		(max_v - 0.000000001, "#F1E760"),# Yellow
-	    (max_v, "#ffffff"),  # Blue
-	    (1.00, "#ffffff"),  # Blue
-	]
-
-	function colors_alias(x, y)
-		return color(x, y, alt_p, A, enemiesInA)
-	end
-	
-	x = 1:n
-	y = 1:n
-	
-	Plots.surface(x = x, y = y, topo_bush_gpu(topo, A, enemies, true), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
-end
 
 # ╔═╡ 924c9d77-af8c-44b7-9053-b48aae4ad475
 ENV["JULIA_CUDA_DEBUG"] = "2"
@@ -759,6 +552,251 @@ begin
 	end
 end
 
+# ╔═╡ a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
+md"Let's follow a \"gradient ascend\" method where the clusters just follow the direction with maximum ascend in hopes of reaching the peak."
+
+# ╔═╡ 2fe91b37-1c3f-49ce-bfa2-702a180b78a0
+begin
+	md"``X``, ``Y`` subdivisions, ``n`` = $(@bind n NumberField(0:100; default=100))"
+end
+
+# ╔═╡ 4167489e-715b-4e62-8e56-3f2cd1317ccd
+begin
+	Random.seed!(seed)
+	# sample code for a 2D array
+	A_L = rand(Float64, L, L) .< (b_density/100)
+	A = zeros(n, n)
+
+	for i in 1:n
+		for j in 1:n
+			A[i, j] = A_L[Int(ceil(i/(n/L))), Int(ceil(j/(n/L)))]
+		end
+	end
+	
+	
+	# use show_image to display the array A
+	show_image(A)
+	# show_image(A, [(0,0,0), (1,1,1)])
+end
+
+# ╔═╡ 0f344406-4816-4cd6-ae8e-83a8b918fa11
+function next_pos(current_pos, B, seed)
+	i, j=current_pos
+
+	# # println("Seed = $seed")
+	# # Random.seed!(seed)
+	# d = rand(-1:1, (2,1))
+	
+	# println("d=$d")
+	# println("x0, y0= $(current_pos)")
+	# x, y=current_pos+d
+	# println("Old x, y= $([x, y])")
+
+	neighbors = [[-1,0],[0-1,0+1],[0,0+1],[0+1,0+1],[0+1,0],[0+1,0-1],[0,0-1],[0-1,0-1]]
+	direction = [0, 0]
+	for neighbor in neighbors
+		i_n, j_n = neighbor
+		direction += B[i_n+i, j_n+j]*[i_n, j_n]
+	end
+	# println("Direction=$direction")
+	direction[1] = sign(direction[1])*ceil(abs(direction[1])/8)
+	direction[2] = sign(direction[2])*ceil(abs(direction[2])/8)
+	direction = 1 * direction
+	# println("NormDirection=$direction")
+
+	if direction[1]==0 && direction[2]==0
+		direction = rand(-1:1, (2,1))
+	end
+	
+	x = i + direction[1]
+	y = j + direction[2]
+	
+	x=min(max(x, 1), n)
+	y=min(max(y, 1), n)
+	# println("New x, y= $([x, y])")
+	return [x, y]
+end
+
+# ╔═╡ 0f0779fa-d610-429f-acd3-ac82b7842b14
+begin
+	Random.seed!(seed)
+	alt_pos = rand(1:n, (altPs,2));
+	alt_h = rand(Float64, (altPs,1))*max_height;
+	hcat(alt_pos, alt_h)
+	alt_p = hcat(alt_pos, alt_h);
+	md"Generating random control points..."
+end
+
+# ╔═╡ b1538261-175d-4892-ab3d-2963f239b8df
+alt_p
+
+# ╔═╡ 8532f267-7e5f-45bb-8d82-6f86cfff7cc4
+begin
+	topo = zeros(Float64, n, n);
+	topo = topography_gpu(topo, alt_p, power)
+	md"Let's define the topography using the control points"
+	# plotly()
+	# show_image(topo, :grays)
+end
+
+# ╔═╡ be20aaf3-473e-4be5-adcc-3db9eb3de213
+begin
+	Random.seed!(seed)
+	enem_pos = rand(1:L, (n_enem,2));
+	enem_z = [topo[row[1], row[2]] for row in eachrow(enem_pos)]
+	# enem_T = fill(1.0, (n_enem,1)) # temperature
+	enem_r = rand(1:3, (n_enem,1));
+	enemies = hcat(enem_pos, enem_r);
+	md"Generating random enemy clusters. The look like so..."
+end
+
+# ╔═╡ cb0bb5cd-a02b-457d-b47a-be623e8d50ed
+enemies
+
+# ╔═╡ 1036ebbb-a16e-4674-b786-9aa9325b0090
+enemies
+
+# ╔═╡ 12351738-ddd3-4051-8880-504ecff343af
+begin
+	plotly()
+	Plots.plot(1:n, 1:n,topo, st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n],xlabel="X", ylabel="Y", zlabel="Z")
+end
+
+# ╔═╡ 3750d105-df07-4af7-9143-82b065fbb041
+begin
+	plotly()
+	Plots.contour(1:n, 1:n,topo, levels=60, xlim=[0,n], ylim=[0,n], ratio=1, fill=true)
+end
+
+# ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
+begin
+	plotly()
+	surface_plot = Plots.plot(1:n, 1:n,topo_bush_gpu(topo, A, enemies, true), st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
+end
+
+# ╔═╡ 230af3ed-9267-497c-a697-e422bcf04665
+begin
+	dx, dy = slope_gpu(topo);
+	
+	slope = [(dx[i, j], dy[i, j]) for i in 1:n, j in 1:n];
+	md"Calculating the slope with a double central difference method"
+end
+
+# ╔═╡ c2a9fa1f-a405-4767-aec2-42196a70cc61
+begin
+	using DelimitedFiles;
+	writedlm("slope.txt", slope);
+	md"Let's write the slopes into a txt file for debugging"
+end
+
+# ╔═╡ 613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
+25+slope[25,81][1], 81+slope[25,81][2]
+
+# ╔═╡ feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
+begin
+
+	topo_bush_enemies = topo_bush_gpu(topo, A)
+	m, _ = size(enemies)
+	for e in 1:m
+		for nh in neighbourhoods(enemies[e, 3] * Int(n/L), 1)
+			topo_bush_enemies[enemies[e, 1] * Int(n/L) + nh[1], enemies[e, 2] * Int(n/L) + nh[2]]+=2
+		end
+	end
+	Plots.plot(1:n, 1:n,topo_bush_enemies, st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
+end
+
+# ╔═╡ a22d6084-18ed-4f71-886d-2ffc40ce599f
+begin
+	function gen_e_in_A(enemies, n, L)
+		enemiesInA = zeros(n, n)
+		r = Int(n/L)
+		for e in 1:size(enemies)[1]
+			for nh in neighbourhoods(enemies[e, 3] * r, 1)
+				enemiesInA[
+					enemies[e, 1] * r + nh[1], 
+					enemies[e, 2] * r + nh[2]						
+				] = 1
+			end
+		end
+		return enemiesInA
+	end
+	
+	function gen_a_in_A(agents, n, L)
+		agentsInA = zeros(n, n)
+		r = Int(n/L)
+		# for a in 1:size(agents)[1]
+		# 	for ii in 1: r
+		# 		for jj in 1:r
+		# 			if(1<= (agents[a, 2]-1)*r+ii <= n) && (1<= (agents[a, 3]-1)*r+jj <= n)
+		# 				agentsInA[(agents[a, 2]-1)*r+ii, (agents[a, 3]-1)*r+jj] = 1
+		# 			end
+		# 		end
+		# 	end
+		# end
+		for a in 1:size(agents)[1]
+			for nh in neighbourhoods(1 * r, 1)
+				if (1<=(agents[a, 2] * r + nh[1])<= n)&&(1<=(agents[a, 3] * r + nh[2])<= n)
+					agentsInA[
+						agents[a, 2] * r + nh[1], 
+						agents[a, 3] * r + nh[2]						
+					] = 1
+				end
+			end
+		end
+		return agentsInA
+	end
+	enemiesInA = gen_e_in_A(enemies, n, L)
+	
+	function color(i, j, alt_ps, A, enemiesInA)
+		z=0.0
+		m, _ = size(alt_ps)
+		norm = 0
+		
+		if (enemiesInA[i, j]!=0)
+			return max_height+10
+		elseif(A[j, i]!=0)
+			return -10
+		end
+		for k in 1:m
+			d = ((alt_ps[k, 1] - i)^2 + (alt_ps[k, 2] - j)^2)^0.5
+			if (d > 0)
+				z += alt_ps[k, 3]/d^power
+				norm += 1/d^power
+			else
+				z = alt_ps[k, 3]
+				return z
+			end
+		end
+		z /= norm
+		# println(typeof(z))
+		return z
+	end
+
+	min_v = 10/(max_height+20)
+	max_v = (max_height+10)/(max_height+20)
+	custom_colorscale = [
+	    (0.00, "#3bff00"),  # Green
+	    (min_v - 0.000000001, "#3bff00"),  # Green
+	    (min_v, "#222224"),  # Blue
+	    (min_v + 1*(max_v-min_v)/5, "#3E2163"),  # Blue
+		(min_v + 2*(max_v-min_v)/5, "#88236A"),# Yellow
+		(min_v + 3*(max_v-min_v)/5, "#D04544"),# Yellow
+		(min_v + 4*(max_v-min_v)/5, "#F78D1E"),# Yellow
+		(max_v - 0.000000001, "#F1E760"),# Yellow
+	    (max_v, "#ffffff"),  # Blue
+	    (1.00, "#ffffff"),  # Blue
+	]
+
+	function colors_alias(x, y)
+		return color(x, y, alt_p, A, enemiesInA)
+	end
+	
+	x = 1:n
+	y = 1:n
+	
+	Plots.surface(x = x, y = y, topo_bush_gpu(topo, A, enemies, true), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+end
+
 # ╔═╡ 84bc9a37-dce3-40cf-85ae-b9107339aabe
 	Plots.contour(1:n, 1:n,topo, levels=60, ratio=1, xlim=[0,n], ylim=[0,n], fill=true, showscale=false)
 
@@ -775,300 +813,11 @@ end
 # ╔═╡ f00613ba-d962-4fe8-8763-98e5af6007a7
 25+x_coordinates[25,81], 81+y_coordinates[25,81]
 
-# ╔═╡ 613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
-25+slope[25,81][1], 81+slope[25,81][2]
-
-# ╔═╡ a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
-md"Let's follow a \"gradient ascend\" method where the clusters just follow the direction with maximum ascend in hopes of reaching the peak."
-
 # ╔═╡ 6f603c0b-b852-473f-9099-b6292ad395b9
 enemies
 
 # ╔═╡ c2873a4e-0bde-4703-be42-9ded1e7d9379
 slope[24*Int(n/L),80*Int(n/L)]
-
-# ╔═╡ 25a2750f-8b75-401a-b7a5-2e51af868845
-@bind t NumberField(1:10000, default=800)
-
-# ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
-Markdown.parse("``t=$(t)\\ \\text{ticks}``")
-
-# ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
-begin
-	function gradient_ascend(enemies, t)
-		enemiesAtT = copy(enemies)
-		enemiesAtT_m, _ = size(enemiesAtT)
-		surfacePlot = []
-		for ti in 2:t
-			for e in 1:enemiesAtT_m
-				i, j = enemiesAtT[e, [1,2]]
-				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
-				r = enemiesAtT[e, 3]
-				# dx = ceil(slopeHere[1] * n/L)
-				# dy = ceil(slopeHere[2] * n/L)
-				
-				angle = atan(slopeHere[2], slopeHere[1])
-				
-				# Determine the direction in the Moore neighborhood
-				if angle < -7*pi/8 || angle >= 7*pi/8
-					dx, dy = -1, 0  # Move left
-				elseif -7*pi/8 <= angle < -5*pi/8
-					dx, dy = -1, -1   # Move down-left
-				elseif -5*pi/8 <= angle < -3*pi/8
-					dx, dy = 0, -1   # Move down
-				elseif -3*pi/8 <= angle < -1*pi/8
-					dx, dy = 1, -1   # Move bottom-right
-				elseif -1*pi/8 <= angle < pi/8
-					dx, dy = 1, 0   # Move right
-				elseif pi/8 <= angle < 3*pi/8
-					dx, dy = 1, 1  # Move top-right
-				elseif 3*pi/8 <= angle < 5*pi/8
-					dx, dy = 0, 1  # Move top
-				elseif 5*pi/8 <= angle < 7*pi/8
-					dx, dy = -1, 1  # Move top-left
-				end
-				
-				enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
-				enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
-			end
-			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
-			
-			function colors_alias2(x, y)
-				return color(x, y, alt_p, A, enemiesInA)
-			end
-			
-			x = 1:n
-			y = 1:n
-			
-		end
-			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemies, true)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
-		for e in 1:enemiesAtT_m
-			println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
-		end
-		return surfacePlot
-	end
-	surfacePlot = gradient_ascend(enemies, t)
-
-	layout = PlutoPlotly.Layout(
-	    scene = attr(
-	        xaxis = attr(range=[0, n]),
-	        yaxis = attr(range=[0, n]),
-	        zaxis = attr(range=[0, L]),
-			
-	        camera = attr(
-	            eye = attr(x=0, y=0, z=1),  # Set the camera position
-	            center = attr(x=0, y=0, z=0),  # Set the center point to look at
-    			up=attr(x=0, y=1, z=0),
-	        )
-		)
-	)
-	PlutoPlotly.plot(surfacePlot, layout)
-end
-
-# ╔═╡ 282cd2e0-8b45-4625-af65-49f2167b1dc4
-md"Clock t = $t"
-
-# ╔═╡ 6d80d171-2ef7-4646-a289-cdeea175221e
-begin
-	# Function to determine the unit vector components based on the given dx, dy, and rotation angle
-	function get_unitDxDY(dx, dy, rotateByPiby2=0)
-		angle = atan(dy,dx) + rotateByPiby2 * pi/2# % pi
-
-		# print(" angle=",angle/pi*360.)
-		
-		# if dx<0
-		# 	angle = (angle + pi) % pi
-		# end
-
-		# print("\n\t   (",@sprintf("%.3f",dx),",",@sprintf("%.3f",dy),") a=",@sprintf("%.3f",angle/pi*180.))
-				
-		# Determine the direction in the Moore neighborhood
-		if angle < -7*pi/8 || angle >= 7*pi/8
-			dx, dy = -1, 0  # Move left
-			# print(" left")
-		elseif -7*pi/8 <= angle < -5*pi/8
-			dx, dy = -1, -1   # Move down-left
-			# print(" down-left")
-		elseif -5*pi/8 <= angle < -3*pi/8
-			dx, dy = 0, -1   # Move down
-			# print(" down")
-		elseif -3*pi/8 <= angle < -1*pi/8
-			dx, dy = 1, -1   # Move bottom-right
-			# print(" bottom-right")
-		elseif -1*pi/8 <= angle < pi/8
-			dx, dy = 1, 0   # Move right
-			# print(" right")
-		elseif pi/8 <= angle < 3*pi/8
-			dx, dy = 1, 1  # Move top-right
-			# print(" top-right")
-		elseif 3*pi/8 <= angle < 5*pi/8
-			dx, dy = 0, 1  # Move top
-			# print(" top")
-		elseif 5*pi/8 <= angle < 7*pi/8
-			dx, dy = -1, 1  # Move top-left
-			# print(" top-left")
-		end
-		return dx, dy
-	end
-
-	# Function to calculate the Gibbs-Boltzmann probability
-	function gibbs_boltzmann_probability(energy_difference, temperature)
-	    return exp(-energy_difference / temperature)
-	end
-	
-	# Function to calculate the Euclidean distance between two points
-	function distance(x1, y1, x2, y2)
-	    return sqrt((x2 - x1)^2 + (y2 - y1)^2)
-	end
-
-	# Function to avoid collision between enemies
-	function avoid_collision(enemiesAtT, e, dx, dy, min_distance, temperature, collision)
-	    x_new = enemiesAtT[e, 1] + dx
-	    y_new = enemiesAtT[e, 2] + dy
-	
-	    for i in 1:size(enemiesAtT, 1)
-	        if i != e
-	            x_other = enemiesAtT[i, 1]
-	            y_other = enemiesAtT[i, 2]
-	
-				if distance(x_new, y_new, x_other, y_other) < (min_distance + enemiesAtT[i, 3])
-					# print("col (", e, ",", i, ") R=(",enemiesAtT[e, 1] - x_other, ",", enemiesAtT[e, 2] - y_other,")")
-					# dx, dy = [enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other]
-					
-					# Adjust movement to avoid collision based on the relative size of enemies
-					if enemiesAtT[i,3] >= enemiesAtT[e, 3]
-						# Randomly choose a direction to move away from the colliding enemy
-						if rand()<0.5
-							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other)
-						elseif rand()<0.5							
-							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other, 1)
-						else							
-							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other, -1)
-						end
-						
-						# print(" dxdy=(",dx,",",dy,")")
-						# println("\t\t\ttemp=", temperature, ", T*1.1=", temperature * 1.1)
-						
-						collision = true
-						# Adjust the temperature to avoid collision
-						temperature = min(temperature * 1.7, 100)
-						
-						# println("\t\t\ttemp=", temperature)
-					end
-	                break
-	            end
-	        end
-	    end
-	
-	    return dx, dy, temperature, collision
-	end
-
-	seed_value = 42
-	Random.seed!(seed_value)
-	
-	# Main function for gradient ascent while avoiding collisions
-	function gradient_ascend_avoidCollision(enemies, t)
-		enemiesAtT = copy(enemies)
-		enemiesAtT_m, _ = size(enemiesAtT)
-		surfacePlot = []
-		
-		# Initialize the enemy temperatures
-		enem_T=fill(6.0, (n_enem, 1)) 
-		
-		# Iterate over time steps
-		for ti in 1:t
-			# Iterate over enemies
-			for e in 1:enemiesAtT_m
-				# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
-				# println("\n\tT0(",e,")=", enem_T[e])
-				i, j = enemiesAtT[e, [1,2]]
-				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
-				r = enemiesAtT[e, 3]
-				# collision = false
-				# dx = ceil(slopeHere[1] * n/L)
-				# dy = ceil(slopeHere[2] * n/L)
-				
-				# dx = slopeHere[1]
-				# dy = slopeHere[2]
-
-				dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
-
-				# Check and adjust movement to avoid collision
-				if ti>1
-					# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
-					
-					# Check and adjust movement to avoid collision
-				    min_distance = 10 + r
-					dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
-					# print("\n\t    coll?", collision)
-				end
-				
-				
-				if ti>1
-					metropolis = rand()
-					# Check Gibbs Boltzmann probability
-					if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
-						# print("\tmetropolis trip ", metropolis)
-						
-	                    # Take the direction which reduces altitude
-	                    dx, dy = -dx, -dy
-						enem_T[e] = min(enem_T[e] * 1.01, 30)
-					end
-
-					# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
-
-					# Update enemy positions based on movement
-					# if the enemy is near the boundary, bring it in (X)
-					if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
-						if rand()<0.5 # 50% net probability to move inside
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
-						elseif rand()<1/3 # 16.67% net probability to move down
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
-						elseif rand()<1/2 # 16.67% net probability to move up
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
-						end
-					else
-						enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
-					end
-					# if the enemy is near the boundary, bring it in (Y)
-					if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
-						if rand()<0.5 # 50% net probability to move inside
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
-						elseif rand()<1/3 # 16.67% net probability to move left
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
-						elseif rand()<1/2 # 16.67% net probability to move right
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
-						end
-					else
-						enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
-					end
-					
-					# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
-					# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
-				end
-				
-
-					enem_T[e] *= 0.95
-				# if ti % 10 == 0
-				# end
-					
-			end
-			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
-
-			# Update the surface plot for visualization
-			x = 1:n
-			y = 1:n
-			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemiesAtT, true)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
-		end
-		# for e in 1:enemiesAtT_m
-			# println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
-		# end
-		return surfacePlot
-	end
-	surfacePlot1 = gradient_ascend_avoidCollision(enemies, t)
-
-	PlutoPlotly.plot(surfacePlot1, layout)
-end
 
 # ╔═╡ 1cd0c84c-2cca-4251-b718-822477ab0b31
 md"Let's import python things"
@@ -1131,8 +880,9 @@ class Agent:
         # Return the first valid move if any, otherwise stay in the current position
         return valid_moves[0] if valid_moves else (self.x, self.y)
 
-    def random_search(self): # "stochastic" movement of the agents 
+    def random_search(self, seed): # "stochastic" movement of the agents 
         # eight possible moves are there
+        np.random.seed(seed=seed)
         possible_moves = [
             (self.x + 1, self.y), # movement to the right
             (self.x + 1, self.y + 1),
@@ -1148,16 +898,14 @@ class Agent:
         valid_moves = [(x, y) for x, y in possible_moves if 0 <= x < self.env_len and 0 <= y < self.env_len]
 
         # Filter out moves that correspond to bushes (since bushes are not in enemy-camps)
-        valid_moves = [move for move in valid_moves if move not in self.bushes]
+        # valid_moves = [move for move in valid_moves if move not in self.bushes]
 
-        # length of valid moves
-        num_valid_moves = len(valid_moves)
-        #generate a random number between 0 and num_valid_moves-1
-        random_index = np.random.randint(0, num_valid_moves-1)
-        # return the move at the random index
-        return valid_moves[random_index] if valid_moves else (self.x, self.y)
+        lmoves = len(valid_moves)
+        if lmoves == 0:
+            return (self.x, self.y)
         
-        # return np.random.choice(np.array(valid_moves).ravel()) if valid_moves else (self.x, self.y)
+        rng = np.random.randint(0, lmoves)
+        return valid_moves[rng]
     
     def get_enemy_cells(self):
         id = self.target_id
@@ -1269,10 +1017,11 @@ class Agent:
                     if(self.env[i+1][j][0] != 2 and self.env[i][j+1][0] != 2 and self.env[i][j-1][0] != 2):
                         self.set_corner(i,j,label=2)
 
-    def strategic_search(self):
+    def strategic_search(self, seed):
         # Implement a search function when the enemy is detected
         # Will implement the spliting of the searching agent team
         # may need to define a new class
+        np.random.seed(seed=seed)
         cell_list = self.get_enemy_cells()
         [dist, eu_dist, ei, ej] = self.get_enemy_distance(cell_list)
         if(dist > self.gather):
@@ -1303,7 +1052,17 @@ class Agent:
             bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
             eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
             self.target_dist = -1
-            return np.random.choice(eff_bushes) if eff_bushes else (np.random.choice(bush_around) if bush_around else (self.x, self.y))
+
+            lbush = len(eff_bushes)
+            if lbush == 0:
+                if len(bush_around) == 0:
+                    return (self.x, self.y)
+                else:
+                    laround = len(bush_around)
+                    rng = np.random.randint(0, laround)
+                    return bush_around[rng]
+            rng = np.random.randint(0, lbush)
+            return eff_bushes[rng]
         
         else:
             self.check_corner()    
@@ -1320,7 +1079,17 @@ class Agent:
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.target_x, self.target_y)]
                 opt_bushes = [bush for bush in bush_around if self.opt_region(bush, x_pseudo, self.y, self.move_x, self.move_y, label = 1)]
-                return np.random.choice(opt_bushes) if opt_bushes else (np.random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
+                lbush = len(opt_bushes)
+                if lbush == 0:
+                    if len(eff_bushes) == 0:
+                        return (self.x, self.y)
+                    else:
+                        laround = len(eff_bushes)
+                        rng = np.random.randint(0, laround)
+                        return eff_bushes[rng]
+                rng = np.random.randint(0, lbush)
+                return opt_bushes[rng]
+    
             else:
                 self.move_x = self.target_x
                 self.move_y = self.invert(self.target_y)
@@ -1333,7 +1102,16 @@ class Agent:
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
                 opt_bushes = [bush for bush in bush_around if (bush in reg)]
-                return np.random.choice(opt_bushes) if opt_bushes else (np.random.choice(eff_bushes) if eff_bushes else (self.x, self.y))
+                lbush = len(opt_bushes)
+                if lbush == 0:
+                    if len(eff_bushes) == 0:
+                        return (self.x, self.y)
+                    else:
+                        laround = len(eff_bushes)
+                        rng = np.random.randint(0, laround)
+                        return eff_bushes[rng]
+                rng = np.random.randint(0, lbush)
+                return opt_bushes[rng]
 
     def get_region(self, x, y, move_x, move_y, label):
         if (label==2):
@@ -1362,9 +1140,9 @@ class Agent:
             return self.opt_region(pos, x_new, y_new, self.invert(move_x), self.invert(move_y), 1)
         else:
             (pi, pj) = pos
-            if(move_y == "up" and (pj<y or pj>y+5)):
+            if(move_y == "up" and (pj<y or pj>y+self.gather)):
                 return False
-            if(move_y == "down" and (pj>y or pj<y-5)):
+            if(move_y == "down" and (pj>y or pj<y-self.gather)):
                 return False
             if(move_x == "left" and (pi < x - abs(y-pj))):
                 return False
@@ -1438,32 +1216,44 @@ class Agent:
         # centered around current cell
    
     def check_camp(self):
-      if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
-        #return the center of the rhombus
-        if (self.enemy_end_1[0]-self.prevx)**2 +(self.enemy_end_2[1]-self.prevy)**2 >  (self.enemy_end_2[0]-self.prevx)**2 +(self.enemy_end_1[1]-self.prevy)**2:
-            center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
-        else:
-            center_pos = (self.enemy_end_2[0],self.enemy_end_1[1])
-        enemy_size = abs(self.enemy_end_1[0] - center_pos[0]) + abs(self.enemy_end_1[1] - center_pos[1])
-        return [center_pos, enemy_size]
-      else: 
-        if (self.enemy_end_1[0]-self.x)**2 +(self.enemy_end_1[1]-self.y)**2 < (self.enemy_end_2[0]-self.x)**2 +(self.enemy_end_2[1]-self.y)**2:
-            self.enemy_end_2 = None
-        else:
-            self.enemy_end_1 = None
-        return [-1, -1]  
+        if (self.enemy_end_1 is None) or (self.enemy_end_2 is None):
+            return [-1, -1]
+      
+        if abs(self.enemy_end_1[0] - self.enemy_end_2[0]) == abs(self.enemy_end_1[1]-self.enemy_end_2[1]):
+            #return the center of the rhombus
+            if (self.enemy_end_1[0]-self.prevx)**2 +(self.enemy_end_2[1]-self.prevy)**2 >  (self.enemy_end_2[0]-self.prevx)**2 +(self.enemy_end_1[1]-self.prevy)**2:
+                center_pos = (self.enemy_end_1[0],self.enemy_end_2[1])# or (self.enemy_end_2[0],self.enemy_end_1[1])
+            else:
+                center_pos = (self.enemy_end_2[0],self.enemy_end_1[1])
+            enemy_size = abs(self.enemy_end_1[0] - center_pos[0]) + abs(self.enemy_end_1[1] - center_pos[1])
+            return [center_pos, enemy_size]
+        else: 
+            if (self.enemy_end_1[0]-self.x)**2 +(self.enemy_end_1[1]-self.y)**2 < (self.enemy_end_2[0]-self.x)**2 +(self.enemy_end_2[1]-self.y)**2:
+                self.enemy_end_2 = None
+            else:
+                self.enemy_end_1 = None
+            return [-1, -1]  
     
     def print_pos(self):
       return "Agent {} is at ({}, {})".format(self.unique_id, self.x, self.y)
+
+    def XY(self):
+      return self.unique_id, self.x, self.y
 """
 	Agent = py"Agent"
 end
 
 # ╔═╡ 19509564-714a-47a5-948e-88c1eacfc6e9
+# ╠═╡ disabled = true
+#=╠═╡
 # agent1 = Agent(unique_id=1, x=3, y=4, view_sight=3, gather_sight=2, env_len=10)
+  ╠═╡ =#
 
 # ╔═╡ aafa147d-2d25-40fa-abb9-ff4cc54764b6
+# ╠═╡ disabled = true
+#=╠═╡
 # agent1.__str__()
+  ╠═╡ =#
 
 # ╔═╡ b2c0fadb-1471-4fdc-a56c-e1313cbd3b58
 md"Step function that controls the agents"
@@ -1472,9 +1262,8 @@ md"Step function that controls the agents"
 begin
 	py"""
 import numpy as np
-def step(agents, grid, seen_enemies):
+def step(agents, grid, seen_enemies, seed):
     new_agents_positions = [] 
-    print(grid[0])
     for agent in agents:
         # If you have an Environment class, uncomment the line below
         # surrounding_info = self.environment.get_surrounding_info(agent.x, agent.y, agent)
@@ -1486,26 +1275,31 @@ def step(agents, grid, seen_enemies):
         enemies = agent.new_enemy # list of enemy coordinates in current field of vision
 
         if len(enemies):
+            # new_position = agent.random_search(seed)
+            # new_position = [agent.x + np.random.randint(-1, 2), agent.y + np.random.randint(-1, 2)]
             if(agent.target != 1):
                 enemy_pos = [enemies[0][0], enemies[0][1]]
                 print('New enemy detected at ({},{}). Performing Strategic Search'.format(enemy_pos[0],enemy_pos[1]))
                 agent.target = 1
                 agent.target_id = grid[enemies[0][0]][enemies[0][0]][1]  # to be changes according to environment code
             elif(agent.target_id not in seen_enemies):
-                new_position = agent.strategic_search()
+                new_position = agent.strategic_search(seed)
                 [enemy_center_pos, enemy_size] = agent.check_camp()
                 if enemy_center_pos==-1:
-                    new_position = agent.strategic_search()
+                    new_position = agent.strategic_search(seed)
                 else:
                     seen_enemies.append(enemy_center_pos)  
                     print("Enemy discovered with centre at ({}, {}) and of the size of {}".format(enemy_center_pos[0], enemy_center_pos[1], enemy_size))
-
         else:
-            new_position = agent.random_search()
+            new_position = agent.random_search(seed)
+            # new_position = [agent.x + np.random.randint(-1, 2), agent.y + np.random.randint(-1, 2)]
+
+        # new_position = [agent.x + np.random.randint(-1, 2), agent.y + np.random.randint(-1, 2)]
+        # new_position = [agent.x, agent.y]
         
         agent.prevx, agent.prevy = agent.x, agent.y 
         agent.x, agent.y = new_position[0], new_position[1]
-        new_agents_positions.append([agent.x, agent.y])
+        new_agents_positions.append([agent.unique_id, agent.x, agent.y])
         #  self.env.move_agent(agent, new_position[0], new_position[1])
     return new_agents_positions, seen_enemies
 """
@@ -1587,13 +1381,9 @@ begin
 	"
 end
 
-# ╔═╡ 87e13161-cee5-4fc8-a1ce-a3357119d74d
-fill(fill((0, 0), L), L)
-
-# ╔═╡ 8238753f-de7c-4de1-9b8d-e125a7834fa1
-enemies
-
 # ╔═╡ d9e8c8a8-9d42-471e-af65-c7a95aa43e24
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	function convert_to_nested_array(arr)
 	    return [arr[i, :] for i in 1:size(arr, 1)]
@@ -1602,22 +1392,477 @@ begin
 	# Create the nested array
 	nestedArr = convert_to_nested_array(topo_bush_python_gpu(topo, A, enemies))
 end
+  ╠═╡ =#
 
 # ╔═╡ 4f42ab19-8862-4d74-a0a8-53baab8d0b42
-topo_bush_python_gpu(topo, A, enemies)
+topo_bush_python_gpu(topo, A, enemies);
 
-# ╔═╡ 641ed9a8-79c6-4f71-a384-b04d93a15346
-topo_bush_python_gpu(topo, A, enemies)[1]
+# ╔═╡ 45261482-7c2a-4213-a62b-bbd70de2c704
+md"## Agents"
+
+# ╔═╡ 0b2788f8-d225-4cb9-bdfb-00616c09ab8e
+md"Let there be... $(@bind n_agent NumberField(1:10, default=4)) agents"
+
+# ╔═╡ 5b1f8188-8d08-4486-adf7-7624fdc7202e
+begin
+	function color_kernel2(colors_A_gpu, alt_p_gpu, A_gpu, enemiesInA_gpu, agentsInA_gpu, m, n, max_height, power)
+		i = threadIdx().x + (blockIdx().x - 1) * blockDim().x
+		j = threadIdx().y + (blockIdx().y - 1) * blockDim().y
+		if 1 <= i <= m && 1 <= j <= n
+			colors_A_gpu[i, j]=0.0
+			alt_ps_m, _ = size(alt_p_gpu)
+			norm = 0
+	
+			if (enemiesInA_gpu[j, i]!=0) # enemy
+				colors_A_gpu[i, j] = max_height+6
+			elseif(agentsInA_gpu[j, i]!=0) # agent
+				colors_A_gpu[i, j] = max_height+20
+			elseif(A_gpu[i, j]!=0) # bush
+				colors_A_gpu[i, j] = -10
+			else
+				flag = 1
+				for k in 1:alt_ps_m
+					d = ((alt_p_gpu[k, 2] - i)^2 + (alt_p_gpu[k, 1] - j)^2)^0.5
+					if (d > 0 && flag==1)
+						colors_A_gpu[i, j] += alt_p_gpu[k, 3]/d^power
+						norm += 1/d^power
+					else
+						colors_A_gpu[i, j] = alt_p_gpu[k, 3]
+						flag = 0
+					end
+				end
+				if(flag==1)
+					colors_A_gpu[i, j] /= norm
+				end
+			end
+		end
+		return
+	end
+				
+	function color_gpu2(alt_p, A, enemiesInA, agentsInA, max_height, power)
+		m, n = size(A)
+		alt_p_gpu = CuArray(alt_p)
+		A_gpu = CuArray(A)
+		colors_A_gpu = similar(A_gpu)
+		enemiesInA_gpu = CuArray(enemiesInA)
+		agentsInA_gpu = CuArray(agentsInA)
+		
+		threads_x = min(max_threads, m)  # Limit to max_threads threads in the x dimension
+		threads_y = min(max_threads, n)  # Limit to max_threads threads in the y dimension
+		blocks_x = ceil(Int, m / threads_x)
+		blocks_y = ceil(Int, n / threads_y)
+		
+		@cuda threads=(threads_x, threads_y) blocks=(blocks_x, blocks_y) color_kernel2(colors_A_gpu, alt_p_gpu, A_gpu, enemiesInA_gpu, agentsInA_gpu, m, n, max_height, power)
+		
+		return collect(colors_A_gpu)
+	end
+end
+
+# ╔═╡ 4fc38e89-e776-46af-9f5f-e005b997821b
+begin
+	min_v2 = 10/(max_height+30)
+	max_v2 = (max_height+10)/(max_height+30)
+	bush_v2 = (max_height+20)/(max_height+30)
+	custom_colorscale2 = [
+		(0, "#3bff00"),  # Green
+		(min_v2 - 0.000000001, "#3bff00"),  # Green
+		(min_v2, "#222224"),  # Blue
+		(min_v2 + 1*(max_v2-min_v2)/5, "#3E2163"),  # Blue
+		(min_v2 + 2*(max_v2-min_v2)/5, "#88236A"),# Yellow
+		(min_v2 + 3*(max_v2-min_v2)/5, "#D04544"),# Yellow
+		(min_v2 + 4*(max_v2-min_v2)/5, "#F78D1E"),# Yellow
+		(max_v2 - 0.000000001, "#F1E760"),# Yellow
+		(max_v2, "#ffffff"),  # White
+		(bush_v2, "#ffffff"),  # White
+		(bush_v2+0.01, "#000000"),  # Black
+		(1, "#000000"),  # Black
+	]
+end
+
+# ╔═╡ fd1d674b-9d98-45fe-9159-3a447ace6af6
+[min_v2, max_v2, bush_v2]
+
+# ╔═╡ 2ba11cce-52b6-445a-aac5-7f45d5697376
+function print_agents(agents_obj)
+	m = size(agents_obj)[1]
+	for i in 1:m
+		println(agents_obj[i].XY())
+	end
+end	
 
 # ╔═╡ d091b339-af6d-4118-ac00-f2679372e21d
 begin
 	agent1 = Agent(unique_id=1, x=3, y=4, view_sight=3, gather_sight=2, env_len=10)
 	agent2 = Agent(unique_id=2, x=6, y=9, view_sight=3, gather_sight=2, env_len=10)
-	step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
+	println(step_agents([agent1, agent2], topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents([agent1, agent2])
 end
 
 # ╔═╡ 8a9cf010-3fad-4318-bb6c-97602cb040aa
-agent1.print_pos()
+agent1.XY()
+
+# ╔═╡ db9c87a1-2af5-49b6-9335-3e15069e8822
+begin
+	Random.seed!(seed+100)
+	agent_pos = rand(1:L, (n_agent,2));
+	# agent_pos = fill(25, (n_agent,2));
+	agents = fill(0, (n_agent, 3))
+	agent_objs = []
+
+	for i in 1:n_agent
+		agents[i, 1], agents[i, 2], agents[i, 3] = i, agent_pos[i, 1], agent_pos[i, 2];
+		print(agents[i, [1, 2, 3]])
+		push!(agent_objs, Agent(unique_id=agents[i, 1], x=agents[i, 2], y=agents[i, 3], view_sight=5, gather_sight=3, env_len=L))
+		print_agents([agent_objs[i]])
+	end
+	md"Generating random enemy clusters. The look like so..."
+end
+
+# ╔═╡ d79c24f7-55c1-48ed-a974-a4ffa863ef40
+agents
+
+# ╔═╡ c20331aa-5da4-48d8-9285-62595d15c340
+begin
+	println(step_agents(agent_objs, topo_bush_python_gpu(topo, A, enemies), [], seed))
+	print_agents(agent_objs)
+end
+
+# ╔═╡ cb8eedae-25c0-415c-8128-c1dbf8f035b3
+agents
+
+# ╔═╡ 44688b66-caae-46a1-85d7-a4c76a7838f2
+print_agents(agent_objs)
+
+# ╔═╡ b81ecc1b-ae19-4e8c-82c3-061377dbc857
+begin
+	# Function to determine the unit vector components based on the given dx, dy, and rotation angle
+	function get_unitDxDY(dx, dy, rotateByPiby2=0)
+		angle = atan(dy,dx) + rotateByPiby2 * pi/2# % pi
+
+		# print(" angle=",angle/pi*360.)
+		
+		# if dx<0
+		# 	angle = (angle + pi) % pi
+		# end
+
+		# print("\n\t   (",@sprintf("%.3f",dx),",",@sprintf("%.3f",dy),") a=",@sprintf("%.3f",angle/pi*180.))
+				
+		# Determine the direction in the Moore neighborhood
+		if angle < -7*pi/8 || angle >= 7*pi/8
+			dx, dy = -1, 0  # Move left
+			# print(" left")
+		elseif -7*pi/8 <= angle < -5*pi/8
+			dx, dy = -1, -1   # Move down-left
+			# print(" down-left")
+		elseif -5*pi/8 <= angle < -3*pi/8
+			dx, dy = 0, -1   # Move down
+			# print(" down")
+		elseif -3*pi/8 <= angle < -1*pi/8
+			dx, dy = 1, -1   # Move bottom-right
+			# print(" bottom-right")
+		elseif -1*pi/8 <= angle < pi/8
+			dx, dy = 1, 0   # Move right
+			# print(" right")
+		elseif pi/8 <= angle < 3*pi/8
+			dx, dy = 1, 1  # Move top-right
+			# print(" top-right")
+		elseif 3*pi/8 <= angle < 5*pi/8
+			dx, dy = 0, 1  # Move top
+			# print(" top")
+		elseif 5*pi/8 <= angle < 7*pi/8
+			dx, dy = -1, 1  # Move top-left
+			# print(" top-left")
+		end
+		return dx, dy
+	end
+
+	# Function to calculate the Gibbs-Boltzmann probability
+	function gibbs_boltzmann_probability(energy_difference, temperature)
+	    return exp(-energy_difference / temperature)
+	end
+	
+	# Function to calculate the Euclidean distance between two points
+	function distance(x1, y1, x2, y2)
+	    return sqrt((x2 - x1)^2 + (y2 - y1)^2)
+	end
+
+	# Function to avoid collision between enemies
+	function avoid_collision(enemiesAtT, e, dx, dy, min_distance, temperature, collision)
+	    x_new = enemiesAtT[e, 1] + dx
+	    y_new = enemiesAtT[e, 2] + dy
+	
+	    for i in 1:size(enemiesAtT, 1)
+	        if i != e
+	            x_other = enemiesAtT[i, 1]
+	            y_other = enemiesAtT[i, 2]
+	
+				if distance(x_new, y_new, x_other, y_other) < (min_distance + enemiesAtT[i, 3])
+					# print("col (", e, ",", i, ") R=(",enemiesAtT[e, 1] - x_other, ",", enemiesAtT[e, 2] - y_other,")")
+					# dx, dy = [enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other]
+					
+					# Adjust movement to avoid collision based on the relative size of enemies
+					if enemiesAtT[i,3] >= enemiesAtT[e, 3]
+						# Randomly choose a direction to move away from the colliding enemy
+						if rand()<0.5
+							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other)
+						elseif rand()<0.5							
+							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other, 1)
+						else							
+							dx, dy = get_unitDxDY(enemiesAtT[e, 1] - x_other, enemiesAtT[e, 2] - y_other, -1)
+						end
+						
+						# print(" dxdy=(",dx,",",dy,")")
+						# println("\t\t\ttemp=", temperature, ", T*1.1=", temperature * 1.1)
+						
+						collision = true
+						# Adjust the temperature to avoid collision
+						temperature = min(temperature * 1.7, 100)
+						
+						# println("\t\t\ttemp=", temperature)
+					end
+	                break
+	            end
+	        end
+	    end
+	
+	    return dx, dy, temperature, collision
+	end
+
+	seed_value = 42
+	Random.seed!(seed_value)
+end
+
+# ╔═╡ 25a2750f-8b75-401a-b7a5-2e51af868845
+@bind t NumberField(1:10000, default=800)
+
+# ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
+Markdown.parse("``t=$(t)\\ \\text{ticks}``")
+
+# ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
+begin
+	function gradient_ascend(enemies, t)
+		enemiesAtT = copy(enemies)
+		enemiesAtT_m, _ = size(enemiesAtT)
+		surfacePlot = []
+		for ti in 2:t
+			for e in 1:enemiesAtT_m
+				i, j = enemiesAtT[e, [1,2]]
+				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
+				r = enemiesAtT[e, 3]
+				# dx = ceil(slopeHere[1] * n/L)
+				# dy = ceil(slopeHere[2] * n/L)
+				
+				angle = atan(slopeHere[2], slopeHere[1])
+				
+				# Determine the direction in the Moore neighborhood
+				if angle < -7*pi/8 || angle >= 7*pi/8
+					dx, dy = -1, 0  # Move left
+				elseif -7*pi/8 <= angle < -5*pi/8
+					dx, dy = -1, -1   # Move down-left
+				elseif -5*pi/8 <= angle < -3*pi/8
+					dx, dy = 0, -1   # Move down
+				elseif -3*pi/8 <= angle < -1*pi/8
+					dx, dy = 1, -1   # Move bottom-right
+				elseif -1*pi/8 <= angle < pi/8
+					dx, dy = 1, 0   # Move right
+				elseif pi/8 <= angle < 3*pi/8
+					dx, dy = 1, 1  # Move top-right
+				elseif 3*pi/8 <= angle < 5*pi/8
+					dx, dy = 0, 1  # Move top
+				elseif 5*pi/8 <= angle < 7*pi/8
+					dx, dy = -1, 1  # Move top-left
+				end
+				
+				enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
+				enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
+			end
+			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
+			
+			function colors_alias2(x, y)
+				return color(x, y, alt_p, A, enemiesInA)
+			end
+			
+			x = 1:n
+			y = 1:n
+			
+		end
+			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemies, true)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+		for e in 1:enemiesAtT_m
+			println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
+		end
+		return surfacePlot
+	end
+	surfacePlot = gradient_ascend(enemies, t)
+
+	layout = PlutoPlotly.Layout(
+	    scene = attr(
+	        xaxis = attr(range=[0, n]),
+	        yaxis = attr(range=[0, n]),
+	        zaxis = attr(range=[0, L]),
+			
+	        camera = attr(
+	            eye = attr(x=0, y=0, z=0.85),  # Set the camera position
+	            center = attr(x=0, y=0, z=0),  # Set the center point to look at
+    			up=attr(x=0, y=1, z=0),
+	        )
+		)
+	)
+	PlutoPlotly.plot(surfacePlot, layout)
+end
+
+# ╔═╡ 282cd2e0-8b45-4625-af65-49f2167b1dc4
+md"Clock t = $t"
+
+# ╔═╡ 6d80d171-2ef7-4646-a289-cdeea175221e
+begin
+	# Main function for gradient ascent while avoiding collisions
+	function gradient_ascend_avoidCollision(enemies, agents, agent_objs, t)
+		enemiesAtT = copy(enemies)
+		agentsAtT = copy(agents)
+		agent_objs_local = copy(agent_objs)
+		print_agents(agent_objs_local)
+		enemiesAtT_m, _ = size(enemiesAtT)
+		surfacePlot = []
+		discovered_enemies = []
+		
+		# Initialize the enemy temperatures
+		enem_T=fill(6.0, (n_enem, 1)) 
+		
+		# Iterate over time steps
+		for ti in 1:t
+			println()
+			# print_agents(agent_objs_local)
+			println(agentsAtT)
+			if ti>1
+				agentsAtT, discovered_enemies = step_agents(agent_objs_local, topo_bush_python_gpu(topo, A, enemies), discovered_enemies, seed)
+	
+				# print_agents(agent_objs_local)
+				println(agentsAtT)
+				
+				println(discovered_enemies)
+			end
+			# Iterate over enemies
+			println(ti%5==0)
+			if(ti%5==0)
+				println(ti%5==0)
+				for e in 1:enemiesAtT_m
+					# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
+					# println("\n\tT0(",e,")=", enem_T[e])
+					i, j = enemiesAtT[e, [1,2]]
+					slopeHere = slope[i* Int(n/L), j* Int(n/L)]
+					r = enemiesAtT[e, 3]
+					# collision = false
+					# dx = ceil(slopeHere[1] * n/L)
+					# dy = ceil(slopeHere[2] * n/L)
+					
+					# dx = slopeHere[1]
+					# dy = slopeHere[2]
+	
+					dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
+	
+					# Check and adjust movement to avoid collision
+					if ti>1
+						# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
+						
+						# Check and adjust movement to avoid collision
+					    min_distance = 10 + r
+						dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
+						# print("\n\t    coll?", collision)
+					end
+					
+					
+					if ti>1
+						metropolis = rand()
+						# Check Gibbs Boltzmann probability
+						if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
+							# print("\tmetropolis trip ", metropolis)
+							
+		                    # Take the direction which reduces altitude
+		                    dx, dy = -dx, -dy
+							enem_T[e] = min(enem_T[e] * 1.01, 30)
+						end
+	
+						# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
+	
+						# Update enemy positions based on movement
+						# if the enemy is near the boundary, bring it in (X)
+						if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
+							if rand()<0.5 # 50% net probability to move inside
+								enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
+							elseif rand()<1/3 # 16.67% net probability to move down
+								enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
+							elseif rand()<1/2 # 16.67% net probability to move up
+								enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
+							end
+						else
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
+						end
+						# if the enemy is near the boundary, bring it in (Y)
+						if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
+							if rand()<0.5 # 50% net probability to move inside
+								enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
+							elseif rand()<1/3 # 16.67% net probability to move left
+								enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
+							elseif rand()<1/2 # 16.67% net probability to move right
+								enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
+							end
+						else
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
+						end
+						
+						# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
+						# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
+					end
+					
+	
+						enem_T[e] *= 0.95
+					# if ti % 10 == 0
+					# end
+						
+				end
+			end
+			
+			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
+			agentsInA = gen_a_in_A(agentsAtT, n, L)
+
+			# Update the surface plot for visualization
+			x = 1:n
+			y = 1:n
+			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemiesAtT, true)), colorscale=custom_colorscale2, surfacecolor = transpose(color_gpu2(alt_p, A, enemiesInA, agentsInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+		end
+		# for e in 1:enemiesAtT_m
+			# println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
+		# end
+		return surfacePlot
+	end
+	# print_agents(agent_objs)			
+	println(agents)
+	surfacePlot1 = gradient_ascend_avoidCollision(enemies, agents, agent_objs, t)
+
+	PlutoPlotly.plot(surfacePlot1, layout)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -3075,7 +3320,6 @@ version = "1.4.1+1"
 # ╠═7382f5ff-0c87-4d1d-b45f-80286353135f
 # ╟─fd3512a7-8d52-4d25-9ad8-0cc80555da7f
 # ╟─2a3753d3-c08c-4e85-907e-9ebb5a67dab3
-# ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
 # ╠═8327cfec-51df-4c38-839a-b7212ddb24e7
 # ╟─701891a4-6a87-427e-af9b-487dec1dee4d
 # ╟─0f344406-4816-4cd6-ae8e-83a8b918fa11
@@ -3106,13 +3350,14 @@ version = "1.4.1+1"
 # ╟─73014c35-ab99-47e2-bfcb-9076c0720bdf
 # ╟─daf19ff1-0012-4b12-b61f-1d9517178bf5
 # ╟─5b8de4a5-f6d7-407a-8709-4e0d392e21b9
-# ╟─e9055da6-3c24-4fe9-919c-1040916c79c3
+# ╠═e9055da6-3c24-4fe9-919c-1040916c79c3
 # ╠═be20aaf3-473e-4be5-adcc-3db9eb3de213
 # ╟─cb0bb5cd-a02b-457d-b47a-be623e8d50ed
-# ╟─477ae165-07d6-4a64-8ce4-8c4b4c25011e
+# ╠═477ae165-07d6-4a64-8ce4-8c4b4c25011e
 # ╟─86078a29-e2a6-470b-8757-b2efe2bf9eb8
 # ╠═feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
 # ╟─c0bc8f94-9636-461a-9b34-fe0ccfefcb69
+# ╠═1036ebbb-a16e-4674-b786-9aa9325b0090
 # ╠═a22d6084-18ed-4f71-886d-2ffc40ce599f
 # ╠═924c9d77-af8c-44b7-9053-b48aae4ad475
 # ╠═9f30ffe2-6546-480b-a89d-0f557469e82d
@@ -3122,26 +3367,36 @@ version = "1.4.1+1"
 # ╠═f00613ba-d962-4fe8-8763-98e5af6007a7
 # ╠═613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
 # ╟─a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
+# ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
 # ╠═fa304120-14f9-4c1a-a430-0438db6743f3
 # ╠═282cd2e0-8b45-4625-af65-49f2167b1dc4
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
 # ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
-# ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─1cd0c84c-2cca-4251-b718-822477ab0b31
 # ╟─8bab643a-9618-4d04-ad1d-0cdd3963a630
 # ╠═5d68976b-cacd-4ac5-88e2-b669e2a29490
 # ╠═19509564-714a-47a5-948e-88c1eacfc6e9
 # ╠═aafa147d-2d25-40fa-abb9-ff4cc54764b6
-# ╟─b2c0fadb-1471-4fdc-a56c-e1313cbd3b58
+# ╠═b2c0fadb-1471-4fdc-a56c-e1313cbd3b58
 # ╠═56209a97-52d3-4d15-8e12-ea9fff19a1b1
-# ╠═572f1062-de7d-4bf1-a506-cd7c644390c0
-# ╠═87e13161-cee5-4fc8-a1ce-a3357119d74d
-# ╠═8238753f-de7c-4de1-9b8d-e125a7834fa1
-# ╠═d9e8c8a8-9d42-471e-af65-c7a95aa43e24
+# ╟─572f1062-de7d-4bf1-a506-cd7c644390c0
+# ╟─d9e8c8a8-9d42-471e-af65-c7a95aa43e24
 # ╠═4f42ab19-8862-4d74-a0a8-53baab8d0b42
-# ╠═641ed9a8-79c6-4f71-a384-b04d93a15346
 # ╠═d091b339-af6d-4118-ac00-f2679372e21d
 # ╠═8a9cf010-3fad-4318-bb6c-97602cb040aa
+# ╟─45261482-7c2a-4213-a62b-bbd70de2c704
+# ╠═0b2788f8-d225-4cb9-bdfb-00616c09ab8e
+# ╠═d79c24f7-55c1-48ed-a974-a4ffa863ef40
+# ╠═5b1f8188-8d08-4486-adf7-7624fdc7202e
+# ╠═4fc38e89-e776-46af-9f5f-e005b997821b
+# ╠═fd1d674b-9d98-45fe-9159-3a447ace6af6
+# ╠═c20331aa-5da4-48d8-9285-62595d15c340
+# ╟─2ba11cce-52b6-445a-aac5-7f45d5697376
+# ╠═db9c87a1-2af5-49b6-9335-3e15069e8822
+# ╠═cb8eedae-25c0-415c-8128-c1dbf8f035b3
+# ╠═44688b66-caae-46a1-85d7-a4c76a7838f2
+# ╟─b81ecc1b-ae19-4e8c-82c3-061377dbc857
+# ╠═25a2750f-8b75-401a-b7a5-2e51af868845
+# ╟─6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
