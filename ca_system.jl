@@ -898,7 +898,7 @@ class Agent:
         valid_moves = [(x, y) for x, y in possible_moves if 0 <= x < self.env_len and 0 <= y < self.env_len]
 
         # Filter out moves that correspond to bushes (since bushes are not in enemy-camps)
-        # valid_moves = [move for move in valid_moves if move not in self.bushes]
+        valid_moves = [move for move in valid_moves if move not in self.bushes]
 
         lmoves = len(valid_moves)
         if lmoves == 0:
@@ -1075,7 +1075,7 @@ class Agent:
                     x_pseudo = self.x + eu_dist - self.gather
                 else:
                     x_pseudo = self.x - eu_dist + self.gather
-                reg = self.get_region(x_pseudo, self.y, self.move_x, self.move_y, label = 1) # to be implemented
+                reg = self.get_region(self.x, self.y, self.move_x, self.move_y, label = 1) # to be implemented
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.target_x, self.target_y)]
                 opt_bushes = [bush for bush in bush_around if self.opt_region(bush, x_pseudo, self.y, self.move_x, self.move_y, label = 1)]
@@ -1098,7 +1098,7 @@ class Agent:
                     x_pseudo = self.x + eu_dist - self.gather
                 else:
                     x_pseudo = self.x - eu_dist + self.gather
-                reg = self.get_region(x_pseudo, self.y, self.move_x, self.move_y, label = 2)
+                reg = self.get_region(self.x, self.y, self.move_x, self.move_y, label = 2)
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
                 opt_bushes = [bush for bush in bush_around if (bush in reg)]
@@ -1534,7 +1534,7 @@ begin
 	for i in 1:n_agent
 		agents[i, 1], agents[i, 2], agents[i, 3] = i, agent_pos[i, 1], agent_pos[i, 2];
 		print(agents[i, [1, 2, 3]])
-		push!(agent_objs, Agent(unique_id=agents[i, 1], x=agents[i, 2], y=agents[i, 3], view_sight=5, gather_sight=3, env_len=L))
+		push!(agent_objs, Agent(unique_id=agents[i, 1], x=agents[i, 2], y=agents[i, 3], view_sight=11, gather_sight=5, env_len=L))
 		print_agents([agent_objs[i]])
 	end
 	md"Generating random enemy clusters. The look like so..."
@@ -1739,6 +1739,7 @@ md"Clock t = $t"
 begin
 	# Main function for gradient ascent while avoiding collisions
 	function gradient_ascend_avoidCollision(enemies, agents, agent_objs, t)
+		Random.seed!(seed)
 		enemiesAtT = copy(enemies)
 		agentsAtT = copy(agents)
 		agent_objs_local = copy(agent_objs)
@@ -1754,94 +1755,94 @@ begin
 		for ti in 1:t
 			println()
 			# print_agents(agent_objs_local)
+			
 			println(agentsAtT)
 			if ti>1
-				agentsAtT, discovered_enemies = step_agents(agent_objs_local, topo_bush_python_gpu(topo, A, enemies), discovered_enemies, seed)
+				agentsAtT, discovered_enemies = step_agents(agent_objs_local, topo_bush_python_gpu(topo, A, enemiesAtT), discovered_enemies, seed)
 	
 				# print_agents(agent_objs_local)
 				println(agentsAtT)
 				
 				println(discovered_enemies)
 			end
+
+			println(ti % 3)
+			
 			# Iterate over enemies
-			println(ti%5==0)
-			if(ti%5==0)
-				println(ti%5==0)
-				for e in 1:enemiesAtT_m
-					# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
-					# println("\n\tT0(",e,")=", enem_T[e])
-					i, j = enemiesAtT[e, [1,2]]
-					slopeHere = slope[i* Int(n/L), j* Int(n/L)]
-					r = enemiesAtT[e, 3]
-					# collision = false
-					# dx = ceil(slopeHere[1] * n/L)
-					# dy = ceil(slopeHere[2] * n/L)
+			for e in 1:enemiesAtT_m
+				# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
+				# println("\n\tT0(",e,")=", enem_T[e])
+				i, j = enemiesAtT[e, [1,2]]
+				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
+				r = enemiesAtT[e, 3]
+				# collision = false
+				# dx = ceil(slopeHere[1] * n/L)
+				# dy = ceil(slopeHere[2] * n/L)
+				
+				# dx = slopeHere[1]
+				# dy = slopeHere[2]
+
+				dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
+
+				# Check and adjust movement to avoid collision
+				if ti>1 && (ti % 3 == 0)
+					# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
 					
-					# dx = slopeHere[1]
-					# dy = slopeHere[2]
-	
-					dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
-	
 					# Check and adjust movement to avoid collision
-					if ti>1
-						# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
-						
-						# Check and adjust movement to avoid collision
-					    min_distance = 10 + r
-						dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
-						# print("\n\t    coll?", collision)
-					end
-					
-					
-					if ti>1
-						metropolis = rand()
-						# Check Gibbs Boltzmann probability
-						if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
-							# print("\tmetropolis trip ", metropolis)
-							
-		                    # Take the direction which reduces altitude
-		                    dx, dy = -dx, -dy
-							enem_T[e] = min(enem_T[e] * 1.01, 30)
-						end
-	
-						# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
-	
-						# Update enemy positions based on movement
-						# if the enemy is near the boundary, bring it in (X)
-						if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
-							if rand()<0.5 # 50% net probability to move inside
-								enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
-							elseif rand()<1/3 # 16.67% net probability to move down
-								enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
-							elseif rand()<1/2 # 16.67% net probability to move up
-								enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
-							end
-						else
-							enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
-						end
-						# if the enemy is near the boundary, bring it in (Y)
-						if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
-							if rand()<0.5 # 50% net probability to move inside
-								enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
-							elseif rand()<1/3 # 16.67% net probability to move left
-								enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
-							elseif rand()<1/2 # 16.67% net probability to move right
-								enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
-							end
-						else
-							enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
-						end
-						
-						# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
-						# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
-					end
-					
-	
-						enem_T[e] *= 0.95
-					# if ti % 10 == 0
-					# end
-						
+					min_distance = 10 + r
+					dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
+					# print("\n\t    coll?", collision)
 				end
+				
+				
+				if ti>1 && (ti % 3 == 0)
+					metropolis = rand()
+					# Check Gibbs Boltzmann probability
+					if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
+						# print("\tmetropolis trip ", metropolis)
+						
+						# Take the direction which reduces altitude
+						dx, dy = -dx, -dy
+						enem_T[e] = min(enem_T[e] * 1.01, 30)
+					end
+
+					# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
+
+					# Update enemy positions based on movement
+					# if the enemy is near the boundary, bring it in (X)
+					if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
+						if rand()<0.5 # 50% net probability to move inside
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
+						elseif rand()<1/3 # 16.67% net probability to move down
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
+						elseif rand()<1/2 # 16.67% net probability to move up
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
+						end
+					else
+						enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
+					end
+					# if the enemy is near the boundary, bring it in (Y)
+					if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
+						if rand()<0.5 # 50% net probability to move inside
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
+						elseif rand()<1/3 # 16.67% net probability to move left
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
+						elseif rand()<1/2 # 16.67% net probability to move right
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
+						end
+					else
+						enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
+					end
+					
+					# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
+					# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
+				end
+				
+
+					enem_T[e] *= 0.95
+				# if ti % 10 == 0
+				# end
+					
 			end
 			
 			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
@@ -3396,7 +3397,7 @@ version = "1.4.1+1"
 # ╠═cb8eedae-25c0-415c-8128-c1dbf8f035b3
 # ╠═44688b66-caae-46a1-85d7-a4c76a7838f2
 # ╟─b81ecc1b-ae19-4e8c-82c3-061377dbc857
-# ╠═25a2750f-8b75-401a-b7a5-2e51af868845
-# ╟─6d80d171-2ef7-4646-a289-cdeea175221e
+# ╟─25a2750f-8b75-401a-b7a5-2e51af868845
+# ╠═6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

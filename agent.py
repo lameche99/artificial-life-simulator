@@ -78,7 +78,7 @@ class Agent:
         if lmoves == 0:
             return (self.x, self.y)
         
-        rng = 0 if lmoves == 1 else np.random.randint(0, lmoves-1)
+        rng = np.random.randint(0, lmoves)
         return valid_moves[rng]
     
     def get_enemy_cells(self):
@@ -233,9 +233,9 @@ class Agent:
                     return (self.x, self.y)
                 else:
                     laround = len(bush_around)
-                    rng = 0 if laround == 1 else np.random.randint(0, laround-1)
+                    rng = np.random.randint(0, laround)
                     return bush_around[rng]
-            rng = 0 if lbush == 1 else np.random.randint(0, lbush-1)
+            rng = np.random.randint(0, lbush)
             return eff_bushes[rng]
         
         else:
@@ -249,7 +249,7 @@ class Agent:
                     x_pseudo = self.x + eu_dist - self.gather
                 else:
                     x_pseudo = self.x - eu_dist + self.gather
-                reg = self.get_region(x_pseudo, self.y, self.move_x, self.move_y, label = 1) # to be implemented
+                reg = self.get_region(self.x, self.y, self.move_x, self.move_y, label = 1) # to be implemented
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.target_x, self.target_y)]
                 opt_bushes = [bush for bush in bush_around if self.opt_region(bush, x_pseudo, self.y, self.move_x, self.move_y, label = 1)]
@@ -259,9 +259,9 @@ class Agent:
                         return (self.x, self.y)
                     else:
                         laround = len(eff_bushes)
-                        rng = 0 if laround == 1 else np.random.randint(0, laround-1)
+                        rng = np.random.randint(0, laround)
                         return eff_bushes[rng]
-                rng = 0 if lbush == 1 else np.random.randint(0, lbush-1)
+                rng = np.random.randint(0, lbush)
                 return opt_bushes[rng]
     
             else:
@@ -272,7 +272,7 @@ class Agent:
                     x_pseudo = self.x + eu_dist - self.gather
                 else:
                     x_pseudo = self.x - eu_dist + self.gather
-                reg = self.get_region(x_pseudo, self.y, self.move_x, self.move_y, label = 2)
+                reg = self.get_region(self.x, self.y, self.move_x, self.move_y, label = 2)
                 bush_around = [bush for bush in self.bushes if self.is_in_limit(bush, self.gather)]
                 eff_bushes = [bush for bush in bush_around if self.approach_direction(bush, self.move_x, self.move_y)]
                 opt_bushes = [bush for bush in bush_around if (bush in reg)]
@@ -282,9 +282,9 @@ class Agent:
                         return (self.x, self.y)
                     else:
                         laround = len(eff_bushes)
-                        rng = 0 if laround == 1 else np.random.randint(0, laround-1)
+                        rng = np.random.randint(0, laround)
                         return eff_bushes[rng]
-                rng = 0 if lbush == 1 else np.random.randint(0, lbush-1)
+                rng = np.random.randint(0, lbush)
                 return opt_bushes[rng]
 
     def get_region(self, x, y, move_x, move_y, label):
@@ -314,9 +314,9 @@ class Agent:
             return self.opt_region(pos, x_new, y_new, self.invert(move_x), self.invert(move_y), 1)
         else:
             (pi, pj) = pos
-            if(move_y == "up" and (pj<y or pj>y+5)):
+            if(move_y == "up" and (pj<y or pj>y+self.gather)):
                 return False
-            if(move_y == "down" and (pj>y or pj<y-5)):
+            if(move_y == "down" and (pj>y or pj<y-self.gather)):
                 return False
             if(move_x == "left" and (pi < x - abs(y-pj))):
                 return False
