@@ -77,7 +77,7 @@ class Agent:
         if lmoves == 0:
             return (self.x, self.y)
         
-        rng = np.random.randint(0, lmoves-1)
+        rng = 0 if lmoves == 1 else np.random.randint(0, lmoves-1)
         return valid_moves[rng]
     
     def get_enemy_cells(self):
@@ -231,9 +231,9 @@ class Agent:
                     return (self.x, self.y)
                 else:
                     laround = len(bush_around)
-                    rng = np.random.randint(0, laround-1)
+                    rng = 0 if laround == 1 else np.random.randint(0, laround-1)
                     return bush_around[rng]
-            rng = np.random.randint(0, lbush-1)
+            rng = 0 if lbush == 1 else np.random.randint(0, lbush-1)
             return eff_bushes[rng]
         
         else:
@@ -257,9 +257,9 @@ class Agent:
                         return (self.x, self.y)
                     else:
                         laround = len(eff_bushes)
-                        rng = np.random.randint(0, laround-1)
+                        rng = 0 if laround == 1 else np.random.randint(0, laround-1)
                         return eff_bushes[rng]
-                rng = np.random.randint(0, lbush-1)
+                rng = 0 if lbush == 1 else np.random.randint(0, lbush-1)
                 return opt_bushes[rng]
     
             else:
@@ -280,9 +280,9 @@ class Agent:
                         return (self.x, self.y)
                     else:
                         laround = len(eff_bushes)
-                        rng = np.random.randint(0, laround-1)
+                        rng = 0 if laround == 1 else np.random.randint(0, laround-1)
                         return eff_bushes[rng]
-                rng = np.random.randint(0, lbush-1)
+                rng = 0 if lbush == 1 else np.random.randint(0, lbush-1)
                 return opt_bushes[rng]
 
     def get_region(self, x, y, move_x, move_y, label):
@@ -402,4 +402,9 @@ class Agent:
         else:
             self.enemy_end_1 = None
         return [-1, -1]  
+    
+    def print_pos(self):
+      return "Agent {} is at ({}, {})".format(self.unique_id, self.x, self.y)
 
+    def XY(self):
+      return self.unique_id, self.x, self.y
