@@ -169,7 +169,7 @@ class Agent:
                 self.enemy_end_1 = (ci, cj)
         else:
             if(self.enemy_end_2 is not None):
-                if(abs(self.x-ci)<abs(self.x-self.enemy_end_1[0])):
+                if(abs(self.x-ci)<abs(self.x-self.enemy_end_2[0])):
                     self.enemy_end_2 = (ci, cj)
             else:
                 self.enemy_end_2 = (ci, cj)
