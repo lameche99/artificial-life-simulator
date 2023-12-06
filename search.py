@@ -26,7 +26,7 @@ class SearchModel:
         y = np.random.randrange(self.len)
         return x, y
 
-    def step(agents, grid, seen_enemies):
+    def step(agents, grid, seen_enemies, seed):
         new_agents_positions = [] 
         for agent in agents:
             # If you have an Environment class, uncomment the line below
@@ -45,16 +45,16 @@ class SearchModel:
                     agent.target = 1
                     agent.target_id = grid[enemies[0][0]][enemies[0][0]][1]  # to be changes according to environment code
                 elif(agent.target_id not in seen_enemies):
-                    new_position = agent.strategic_search()
+                    new_position = agent.strategic_search(seed)
                     [enemy_center_pos, enemy_size] = agent.check_camp()
                     if enemy_center_pos==-1:
-                        new_position = agent.strategic_search()
+                        new_position = agent.strategic_search(seed)
                     else:
                         seen_enemies.append(enemy_center_pos)  
                         print("Enemy discovered with centre at ({}, {}) and of the size of {}".format(enemy_center_pos[0], enemy_center_pos[1], enemy_size))
 
             else:
-                new_position = agent.random_search()
+                new_position = agent.random_search(seed)
             
             agent.prevx, agent.prevy = agent.x, agent.y 
             agent.x, agent.y = new_position[0], new_position[1]

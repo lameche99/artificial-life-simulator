@@ -54,8 +54,9 @@ class Agent:
         # Return the first valid move if any, otherwise stay in the current position
         return valid_moves[0] if valid_moves else (self.x, self.y)
 
-    def random_search(self): # "stochastic" movement of the agents 
+    def random_search(self, seed): # "stochastic" movement of the agents 
         # eight possible moves are there
+        np.random.seed(seed=seed)
         possible_moves = [
             (self.x + 1, self.y), # movement to the right
             (self.x + 1, self.y + 1),
@@ -190,10 +191,11 @@ class Agent:
                     if(self.env[i+1][j][0] != 2 and self.env[i][j+1][0] != 2 and self.env[i][j-1][0] != 2):
                         self.set_corner(i,j,label=2)
 
-    def strategic_search(self):
+    def strategic_search(self, seed):
         # Implement a search function when the enemy is detected
         # Will implement the spliting of the searching agent team
         # may need to define a new class
+        np.random.seed(seed=seed)
         cell_list = self.get_enemy_cells()
         [dist, eu_dist, ei, ej] = self.get_enemy_distance(cell_list)
         if(dist > self.gather):
