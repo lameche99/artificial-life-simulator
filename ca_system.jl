@@ -19,6 +19,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 8bab643a-9618-4d04-ad1d-0cdd3963a630
+# ╠═╡ show_logs = false
 begin
 	ENV["PYTHON"] = ""
 	# Pkg.add(["Conda", "PyCall"])
@@ -61,7 +62,7 @@ md"Max Threads, $(@bind max_threads NumberField(1:32, default=26))"
 md"## Initial State"
 
 # ╔═╡ e633b8e0-3774-462f-9d6e-1f586a17730a
-md"Bush density, $(@bind b_density NumberField(1:100, default=3))"
+md"Bush density, $(@bind b_density NumberField(1:100, default=9))"
 
 # ╔═╡ e5c741d7-7c52-4097-8d02-89d76495d53f
 function neighbour_sum(A, pos)
@@ -394,7 +395,10 @@ What will a random walk look like?"
 md"Set climbable slope to... $(@bind max_slope NumberField(1:10, default=7))%"
 
 # ╔═╡ e9055da6-3c24-4fe9-919c-1040916c79c3
-md"Let there be... $(@bind n_enem NumberField(1:10, default=4)) enemy clusters"
+md"Let there be... $(@bind n_enem NumberField(1:10, default=5)) enemy clusters"
+
+# ╔═╡ f2ce2ace-99fb-49c6-9681-d13571e8d032
+
 
 # ╔═╡ 477ae165-07d6-4a64-8ce4-8c4b4c25011e
 begin
@@ -669,10 +673,13 @@ begin
 end
 
 # ╔═╡ 2fff7da7-16ff-407d-92ef-24ee3469b9f4
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	plotly()
 	surface_plot = Plots.plot(1:n, 1:n,topo_bush_gpu(topo, A, enemies, true), st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
 end
+  ╠═╡ =#
 
 # ╔═╡ 230af3ed-9267-497c-a697-e422bcf04665
 begin
@@ -690,9 +697,33 @@ begin
 end
 
 # ╔═╡ 613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
+# ╠═╡ disabled = true
+#=╠═╡
 25+slope[25,81][1], 81+slope[25,81][2]
+  ╠═╡ =#
+
+# ╔═╡ 8a586d49-86c9-4f7f-b438-15ba8181ed2c
+begin
+	x_coordinates = [el[1] for el in slope];
+	y_coordinates = [el[2] for el in slope];
+	quiver(transpose(repeat(reshape(1:n, 1, n), n, 1)),repeat(reshape(1:n, 1, n), n, 1), quiver=( x_coordinates, y_coordinates), arrow_size=1,ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n])
+end
+
+# ╔═╡ 37f3c01d-553e-498d-aea5-9e31b071f6e8
+# ╠═╡ disabled = true
+#=╠═╡
+24+x_coordinates[24, 75], 75+y_coordinates[24, 75]
+  ╠═╡ =#
+
+# ╔═╡ f00613ba-d962-4fe8-8763-98e5af6007a7
+# ╠═╡ disabled = true
+#=╠═╡
+25+x_coordinates[25,81], 81+y_coordinates[25,81]
+  ╠═╡ =#
 
 # ╔═╡ feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 
 	topo_bush_enemies = topo_bush_gpu(topo, A)
@@ -704,6 +735,7 @@ begin
 	end
 	Plots.plot(1:n, 1:n,topo_bush_enemies, st=:surface, ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z")
 end
+  ╠═╡ =#
 
 # ╔═╡ a22d6084-18ed-4f71-886d-2ffc40ce599f
 begin
@@ -794,30 +826,20 @@ begin
 	x = 1:n
 	y = 1:n
 	
-	Plots.surface(x = x, y = y, topo_bush_gpu(topo, A, enemies, true), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+	# Plots.surface(x = x, y = y, topo_bush_gpu(topo, A, enemies, true), colorscale=custom_colorscale, surfacecolor = colors_alias.(x', y), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
 end
 
 # ╔═╡ 84bc9a37-dce3-40cf-85ae-b9107339aabe
 	Plots.contour(1:n, 1:n,topo, levels=60, ratio=1, xlim=[0,n], ylim=[0,n], fill=true, showscale=false)
 
-# ╔═╡ 8a586d49-86c9-4f7f-b438-15ba8181ed2c
-begin
-	x_coordinates = [el[1] for el in slope];
-	y_coordinates = [el[2] for el in slope];
-	quiver(transpose(repeat(reshape(1:n, 1, n), n, 1)),repeat(reshape(1:n, 1, n), n, 1), quiver=( x_coordinates, y_coordinates), arrow_size=1,ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n])
-end
-
-# ╔═╡ 37f3c01d-553e-498d-aea5-9e31b071f6e8
-24+x_coordinates[24, 75], 75+y_coordinates[24, 75]
-
-# ╔═╡ f00613ba-d962-4fe8-8763-98e5af6007a7
-25+x_coordinates[25,81], 81+y_coordinates[25,81]
-
 # ╔═╡ 6f603c0b-b852-473f-9099-b6292ad395b9
 enemies
 
-# ╔═╡ c2873a4e-0bde-4703-be42-9ded1e7d9379
-slope[24*Int(n/L),80*Int(n/L)]
+# ╔═╡ 076eb88e-fa80-40a0-9873-74329bf9b5a5
+md"Clock $(@bind t2 Clock())"
+
+# ╔═╡ 18b40b26-9338-4616-8deb-1a5c9a6a7ae8
+md"## Python for Agents"
 
 # ╔═╡ 1cd0c84c-2cca-4251-b718-822477ab0b31
 md"Let's import python things"
@@ -1382,8 +1404,6 @@ begin
 end
 
 # ╔═╡ d9e8c8a8-9d42-471e-af65-c7a95aa43e24
-# ╠═╡ disabled = true
-#=╠═╡
 begin
 	function convert_to_nested_array(arr)
 	    return [arr[i, :] for i in 1:size(arr, 1)]
@@ -1392,7 +1412,6 @@ begin
 	# Create the nested array
 	nestedArr = convert_to_nested_array(topo_bush_python_gpu(topo, A, enemies))
 end
-  ╠═╡ =#
 
 # ╔═╡ 4f42ab19-8862-4d74-a0a8-53baab8d0b42
 topo_bush_python_gpu(topo, A, enemies);
@@ -1401,7 +1420,7 @@ topo_bush_python_gpu(topo, A, enemies);
 md"## Agents"
 
 # ╔═╡ 0b2788f8-d225-4cb9-bdfb-00616c09ab8e
-md"Let there be... $(@bind n_agent NumberField(1:10, default=4)) agents"
+md"Let there be... $(@bind n_agent NumberField(1:10, default=9)) agents"
 
 # ╔═╡ 5b1f8188-8d08-4486-adf7-7624fdc7202e
 begin
@@ -1459,6 +1478,8 @@ begin
 end
 
 # ╔═╡ 4fc38e89-e776-46af-9f5f-e005b997821b
+# ╠═╡ skip_as_script = true
+#=╠═╡
 begin
 	min_v2 = 10/(max_height+30)
 	max_v2 = (max_height+10)/(max_height+30)
@@ -1478,9 +1499,12 @@ begin
 		(1, "#000000"),  # Black
 	]
 end
+  ╠═╡ =#
 
 # ╔═╡ fd1d674b-9d98-45fe-9159-3a447ace6af6
+#=╠═╡
 [min_v2, max_v2, bush_v2]
+  ╠═╡ =#
 
 # ╔═╡ 2ba11cce-52b6-445a-aac5-7f45d5697376
 function print_agents(agents_obj)
@@ -1491,6 +1515,7 @@ function print_agents(agents_obj)
 end	
 
 # ╔═╡ d091b339-af6d-4118-ac00-f2679372e21d
+# ╠═╡ show_logs = false
 begin
 	agent1 = Agent(unique_id=1, x=3, y=4, view_sight=3, gather_sight=2, env_len=10)
 	agent2 = Agent(unique_id=2, x=6, y=9, view_sight=3, gather_sight=2, env_len=10)
@@ -1524,6 +1549,7 @@ end
 agent1.XY()
 
 # ╔═╡ db9c87a1-2af5-49b6-9335-3e15069e8822
+# ╠═╡ show_logs = false
 begin
 	Random.seed!(seed+100)
 	agent_pos = rand(1:L, (n_agent,2));
@@ -1544,15 +1570,14 @@ end
 agents
 
 # ╔═╡ c20331aa-5da4-48d8-9285-62595d15c340
+# ╠═╡ show_logs = false
 begin
 	println(step_agents(agent_objs, topo_bush_python_gpu(topo, A, enemies), [], seed))
 	print_agents(agent_objs)
 end
 
-# ╔═╡ cb8eedae-25c0-415c-8128-c1dbf8f035b3
-agents
-
 # ╔═╡ 44688b66-caae-46a1-85d7-a4c76a7838f2
+# ╠═╡ show_logs = false
 print_agents(agent_objs)
 
 # ╔═╡ b81ecc1b-ae19-4e8c-82c3-061377dbc857
@@ -1654,13 +1679,11 @@ begin
 	Random.seed!(seed_value)
 end
 
-# ╔═╡ 25a2750f-8b75-401a-b7a5-2e51af868845
-@bind t NumberField(1:10000, default=800)
-
 # ╔═╡ 7382f5ff-0c87-4d1d-b45f-80286353135f
 Markdown.parse("``t=$(t)\\ \\text{ticks}``")
 
 # ╔═╡ fa304120-14f9-4c1a-a430-0438db6743f3
+# ╠═╡ show_logs = false
 begin
 	function gradient_ascend(enemies, t)
 		enemiesAtT = copy(enemies)
@@ -1729,13 +1752,145 @@ begin
 	        )
 		)
 	)
-	PlutoPlotly.plot(surfacePlot, layout)
+	# PlutoPlotly.plot(surfacePlot, layout)
+end
+
+# ╔═╡ 6e9fadb4-879f-435c-bec4-45ed80866825
+begin
+	# Main function for gradient ascent while avoiding collisions
+	function gradient_ascend_avoidCollision2(enemies, t)
+		Random.seed!(seed)
+		enemiesAtT = copy(enemies)
+		# agentsAtT = copy(agents)
+		# agent_objs_local = copy(agent_objs)
+		# print_agents(agent_objs_local)
+		enemiesAtT_m, _ = size(enemiesAtT)
+		surfacePlot = []
+		# discovered_enemies = []
+		
+		# Initialize the enemy temperatures
+		enem_T=fill(6.0, (n_enem, 1)) 
+		
+		# Iterate over time steps
+		for ti in 1:t
+			# println()
+			# print_agents(agent_objs_local)
+			
+			# println(agentsAtT)
+			# if ti>1
+			# 	agentsAtT, discovered_enemies = step_agents(agent_objs_local, topo_bush_python_gpu(topo, A, enemiesAtT), discovered_enemies, seed)
+	
+			# 	# print_agents(agent_objs_local)
+			# 	println(agentsAtT)
+				
+			# 	println(discovered_enemies)
+			# end
+
+			# println(ti % 1)
+			
+			# Iterate over enemies
+			for e in 1:enemiesAtT_m
+				# print(ti, ": gbP(", e, ") = ", @sprintf("%.3f",gibbs_boltzmann_probability(2.0, enem_T[e])), ", T = ", @sprintf("%.3f",enem_T[e]))
+				# println("\n\tT0(",e,")=", enem_T[e])
+				i, j = enemiesAtT[e, [1,2]]
+				slopeHere = slope[i* Int(n/L), j* Int(n/L)]
+				r = enemiesAtT[e, 3]
+				# collision = false
+				# dx = ceil(slopeHere[1] * n/L)
+				# dy = ceil(slopeHere[2] * n/L)
+				
+				# dx = slopeHere[1]
+				# dy = slopeHere[2]
+
+				dx, dy = get_unitDxDY(slopeHere[1], slopeHere[2])
+
+				# Check and adjust movement to avoid collision
+				if ti>1 && (ti % 1 == 0)
+					# print("\n\t",e,":(",i," ",j,") D=(",dx, " ", dy, ") ")
+					
+					# Check and adjust movement to avoid collision
+					min_distance = 10 + r
+					dx, dy, enem_T[e], collision = avoid_collision(enemiesAtT, e, dx, dy, min_distance, enem_T[e], false)
+					# print("\n\t    coll?", collision)
+				end
+				
+				
+				if ti>1 && (ti % 1 == 0)
+					metropolis = rand()
+					# Check Gibbs Boltzmann probability
+					if metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision)
+						# print("\tmetropolis trip ", metropolis)
+						
+						# Take the direction which reduces altitude
+						dx, dy = -dx, -dy
+						enem_T[e] = min(enem_T[e] * 1.01, 30)
+					end
+
+					# print(" mp=",@sprintf("%.3f",metropolis),",trip?", metropolis < gibbs_boltzmann_probability(2.0, enem_T[e]) && !(collision), "(",max(min(enemiesAtT[e, 1] + dx, L-r), r+1)," ",max(min(enemiesAtT[e, 2] + dy, L-r), r+1),") D=(", dx, " ", dy,")\n")
+
+					# Update enemy positions based on movement
+					# if the enemy is near the boundary, bring it in (X)
+					if ((enemiesAtT[e, 1] + dx) > L-r) || ((enemiesAtT[e, 1] + dx) < r+1)
+						if rand()<0.5 # 50% net probability to move inside
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] - dx
+						elseif rand()<1/3 # 16.67% net probability to move down
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] - 1
+						elseif rand()<1/2 # 16.67% net probability to move up
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] + 1
+						end
+					else
+						enemiesAtT[e, 1] = enemiesAtT[e, 1] + dx
+					end
+					# if the enemy is near the boundary, bring it in (Y)
+					if ((enemiesAtT[e, 2] + dy) > L-r) || ((enemiesAtT[e, 2] + dy) < r+1)
+						if rand()<0.5 # 50% net probability to move inside
+							enemiesAtT[e, 2] = enemiesAtT[e, 2] - dy
+						elseif rand()<1/3 # 16.67% net probability to move left
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] - 1
+						elseif rand()<1/2 # 16.67% net probability to move right
+							enemiesAtT[e, 1] = enemiesAtT[e, 1] + 1
+						end
+					else
+						enemiesAtT[e, 2] = enemiesAtT[e, 2] + dy
+					end
+					
+					# enemiesAtT[e, 1] = max(min(enemiesAtT[e, 1] + dx, L-r), r+1)
+					# enemiesAtT[e, 2] = max(min(enemiesAtT[e, 2] + dy, L-r), r+1)
+				end
+				
+
+					enem_T[e] *= 0.95
+				# if ti % 10 == 0
+				# end
+					
+			end
+			
+			enemiesInA = gen_e_in_A(enemiesAtT, n, L)
+			# agentsInA = gen_a_in_A(agentsAtT, n, L)
+
+			# Update the surface plot for visualization
+			x = 1:n
+			y = 1:n
+			surfacePlot = PlutoPlotly.surface(x = x, y = y, z=transpose(topo_bush_gpu(topo, A, enemiesAtT, true)), colorscale=custom_colorscale, surfacecolor = transpose(color_gpu(alt_p, A, enemiesInA, max_height, power)), ratio=1, zlim=[0,L], xlim=[0,n], ylim=[0,n], xlabel="X", ylabel="Y", zlabel="Z", showscale=false)
+		end
+		# for e in 1:enemiesAtT_m
+			# println(e, "(", enemiesAtT[e, 1], ", ", enemiesAtT[e, 2], ") ", enemiesAtT[e, 3], " ", slope[enemiesAtT[e, 1], enemiesAtT[e, 2]])
+		# end
+		return surfacePlot
+	end
+	# print_agents(agent_objs)			
+	# println(agents)
+	surfacePlot2 = gradient_ascend_avoidCollision2(enemies, t2)
+
+	PlutoPlotly.plot(surfacePlot2, layout)
 end
 
 # ╔═╡ 282cd2e0-8b45-4625-af65-49f2167b1dc4
 md"Clock t = $t"
 
 # ╔═╡ 6d80d171-2ef7-4646-a289-cdeea175221e
+# ╠═╡ show_logs = false
+#=╠═╡
 begin
 	# Main function for gradient ascent while avoiding collisions
 	function gradient_ascend_avoidCollision(enemies, agents, agent_objs, t)
@@ -1864,6 +2019,19 @@ begin
 
 	PlutoPlotly.plot(surfacePlot1, layout)
 end
+  ╠═╡ =#
+
+# ╔═╡ f0fdb378-0d7e-4305-afe8-59a3b6f958f8
+
+
+# ╔═╡ 25a2750f-8b75-401a-b7a5-2e51af868845
+# ╠═╡ disabled = true
+#=╠═╡
+@bind t NumberField(1:10000, default=800)
+  ╠═╡ =#
+
+# ╔═╡ 88a7ce82-2280-4b00-8e97-0bff66696b24
+md"Clock $(@bind t Clock())"
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -3331,73 +3499,77 @@ version = "1.4.1+1"
 # ╟─0f0779fa-d610-429f-acd3-ac82b7842b14
 # ╟─b1538261-175d-4892-ab3d-2963f239b8df
 # ╠═ba6660df-59b7-4c70-b30f-b8548d63b0d2
-# ╠═8532f267-7e5f-45bb-8d82-6f86cfff7cc4
+# ╟─8532f267-7e5f-45bb-8d82-6f86cfff7cc4
 # ╟─82d0e800-deb1-42fe-b1d3-2018d8639ff8
 # ╟─8f0937f0-813b-4256-a8b9-afb22e092a42
-# ╟─12351738-ddd3-4051-8880-504ecff343af
+# ╠═12351738-ddd3-4051-8880-504ecff343af
 # ╟─6d4076dc-68c8-42f8-a43e-222e3410bdbf
 # ╟─3750d105-df07-4af7-9143-82b065fbb041
-# ╠═1add5389-3a8b-40b7-b999-8df22bb45900
+# ╟─1add5389-3a8b-40b7-b999-8df22bb45900
 # ╟─11f7bf70-4a39-451c-9bdb-9369742dcce0
 # ╟─cb6482b5-c003-4ad2-8d8b-a60f3946b255
 # ╟─9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
-# ╠═2fff7da7-16ff-407d-92ef-24ee3469b9f4
+# ╟─2fff7da7-16ff-407d-92ef-24ee3469b9f4
 # ╟─08c8c238-8a24-4743-aed5-0e2649758b61
 # ╟─81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
 # ╟─15f17206-db9f-4896-9e32-93d025501917
 # ╟─230af3ed-9267-497c-a697-e422bcf04665
 # ╟─c2a9fa1f-a405-4767-aec2-42196a70cc61
+# ╠═8a586d49-86c9-4f7f-b438-15ba8181ed2c
 # ╟─73014c35-ab99-47e2-bfcb-9076c0720bdf
 # ╟─daf19ff1-0012-4b12-b61f-1d9517178bf5
 # ╟─5b8de4a5-f6d7-407a-8709-4e0d392e21b9
 # ╠═e9055da6-3c24-4fe9-919c-1040916c79c3
 # ╠═be20aaf3-473e-4be5-adcc-3db9eb3de213
-# ╟─cb0bb5cd-a02b-457d-b47a-be623e8d50ed
-# ╠═477ae165-07d6-4a64-8ce4-8c4b4c25011e
+# ╠═cb0bb5cd-a02b-457d-b47a-be623e8d50ed
+# ╠═f2ce2ace-99fb-49c6-9681-d13571e8d032
+# ╟─477ae165-07d6-4a64-8ce4-8c4b4c25011e
 # ╟─86078a29-e2a6-470b-8757-b2efe2bf9eb8
-# ╠═feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
+# ╟─feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
 # ╟─c0bc8f94-9636-461a-9b34-fe0ccfefcb69
 # ╠═1036ebbb-a16e-4674-b786-9aa9325b0090
-# ╠═a22d6084-18ed-4f71-886d-2ffc40ce599f
+# ╟─a22d6084-18ed-4f71-886d-2ffc40ce599f
 # ╠═924c9d77-af8c-44b7-9053-b48aae4ad475
-# ╠═9f30ffe2-6546-480b-a89d-0f557469e82d
+# ╟─9f30ffe2-6546-480b-a89d-0f557469e82d
 # ╠═84bc9a37-dce3-40cf-85ae-b9107339aabe
-# ╠═8a586d49-86c9-4f7f-b438-15ba8181ed2c
 # ╠═37f3c01d-553e-498d-aea5-9e31b071f6e8
 # ╠═f00613ba-d962-4fe8-8763-98e5af6007a7
 # ╠═613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
 # ╟─a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
 # ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
-# ╠═fa304120-14f9-4c1a-a430-0438db6743f3
-# ╠═282cd2e0-8b45-4625-af65-49f2167b1dc4
+# ╟─fa304120-14f9-4c1a-a430-0438db6743f3
+# ╟─282cd2e0-8b45-4625-af65-49f2167b1dc4
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
-# ╠═c2873a4e-0bde-4703-be42-9ded1e7d9379
+# ╠═076eb88e-fa80-40a0-9873-74329bf9b5a5
+# ╠═6e9fadb4-879f-435c-bec4-45ed80866825
+# ╟─18b40b26-9338-4616-8deb-1a5c9a6a7ae8
 # ╟─1cd0c84c-2cca-4251-b718-822477ab0b31
 # ╟─8bab643a-9618-4d04-ad1d-0cdd3963a630
-# ╠═5d68976b-cacd-4ac5-88e2-b669e2a29490
+# ╟─5d68976b-cacd-4ac5-88e2-b669e2a29490
 # ╠═19509564-714a-47a5-948e-88c1eacfc6e9
 # ╠═aafa147d-2d25-40fa-abb9-ff4cc54764b6
 # ╠═b2c0fadb-1471-4fdc-a56c-e1313cbd3b58
-# ╠═56209a97-52d3-4d15-8e12-ea9fff19a1b1
+# ╟─56209a97-52d3-4d15-8e12-ea9fff19a1b1
 # ╟─572f1062-de7d-4bf1-a506-cd7c644390c0
-# ╟─d9e8c8a8-9d42-471e-af65-c7a95aa43e24
+# ╠═d9e8c8a8-9d42-471e-af65-c7a95aa43e24
 # ╠═4f42ab19-8862-4d74-a0a8-53baab8d0b42
-# ╠═d091b339-af6d-4118-ac00-f2679372e21d
+# ╟─d091b339-af6d-4118-ac00-f2679372e21d
 # ╠═8a9cf010-3fad-4318-bb6c-97602cb040aa
 # ╟─45261482-7c2a-4213-a62b-bbd70de2c704
-# ╠═0b2788f8-d225-4cb9-bdfb-00616c09ab8e
+# ╟─0b2788f8-d225-4cb9-bdfb-00616c09ab8e
 # ╠═d79c24f7-55c1-48ed-a974-a4ffa863ef40
-# ╠═5b1f8188-8d08-4486-adf7-7624fdc7202e
-# ╠═4fc38e89-e776-46af-9f5f-e005b997821b
-# ╠═fd1d674b-9d98-45fe-9159-3a447ace6af6
-# ╠═c20331aa-5da4-48d8-9285-62595d15c340
+# ╟─5b1f8188-8d08-4486-adf7-7624fdc7202e
+# ╟─4fc38e89-e776-46af-9f5f-e005b997821b
+# ╟─fd1d674b-9d98-45fe-9159-3a447ace6af6
+# ╟─c20331aa-5da4-48d8-9285-62595d15c340
 # ╟─2ba11cce-52b6-445a-aac5-7f45d5697376
-# ╠═db9c87a1-2af5-49b6-9335-3e15069e8822
-# ╠═cb8eedae-25c0-415c-8128-c1dbf8f035b3
+# ╟─db9c87a1-2af5-49b6-9335-3e15069e8822
 # ╠═44688b66-caae-46a1-85d7-a4c76a7838f2
 # ╟─b81ecc1b-ae19-4e8c-82c3-061377dbc857
-# ╟─25a2750f-8b75-401a-b7a5-2e51af868845
+# ╠═25a2750f-8b75-401a-b7a5-2e51af868845
+# ╠═88a7ce82-2280-4b00-8e97-0bff66696b24
 # ╠═6d80d171-2ef7-4646-a289-cdeea175221e
+# ╠═f0fdb378-0d7e-4305-afe8-59a3b6f958f8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
