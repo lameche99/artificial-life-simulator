@@ -789,6 +789,9 @@ end
 # ╔═╡ 6f603c0b-b852-473f-9099-b6292ad395b9
 enemies
 
+# ╔═╡ 076eb88e-fa80-40a0-9873-74329bf9b5a5
+md"Clock $(@bind t2 Clock())"
+
 # ╔═╡ 18b40b26-9338-4616-8deb-1a5c9a6a7ae8
 md"## Python for Agents"
 
@@ -1963,15 +1966,6 @@ begin
 
 	PlutoPlotly.plot(surfacePlot1, layout)
 end
-  ╠═╡ =#
-
-# ╔═╡ 06e3dba4-39d4-490b-b5c3-cfe43f9e2bf7
-@bind t2 Slider(1:1000, show_value=true)
-
-# ╔═╡ 076eb88e-fa80-40a0-9873-74329bf9b5a5
-# ╠═╡ disabled = true
-#=╠═╡
-md"Clock $(@bind t2 Clock())"
   ╠═╡ =#
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -3450,6 +3444,7 @@ version = "1.4.1+1"
 # ╟─11f7bf70-4a39-451c-9bdb-9369742dcce0
 # ╟─cb6482b5-c003-4ad2-8d8b-a60f3946b255
 # ╟─9a877efd-b3cc-4d7e-ae9a-89d2e8a53356
+# ╟─2fff7da7-16ff-407d-92ef-24ee3469b9f4
 # ╟─08c8c238-8a24-4743-aed5-0e2649758b61
 # ╟─81653527-a1fb-49ab-99db-5fdda6b669fd
 # ╟─c8171ca3-c2d7-4220-b073-1ec76f559b25
@@ -3465,24 +3460,29 @@ version = "1.4.1+1"
 # ╠═cb0bb5cd-a02b-457d-b47a-be623e8d50ed
 # ╟─477ae165-07d6-4a64-8ce4-8c4b4c25011e
 # ╟─86078a29-e2a6-470b-8757-b2efe2bf9eb8
+# ╟─feb2345d-642a-4cd9-9d44-6ff2eb9f2ddd
 # ╟─c0bc8f94-9636-461a-9b34-fe0ccfefcb69
 # ╠═1036ebbb-a16e-4674-b786-9aa9325b0090
 # ╟─a22d6084-18ed-4f71-886d-2ffc40ce599f
 # ╠═924c9d77-af8c-44b7-9053-b48aae4ad475
 # ╟─9f30ffe2-6546-480b-a89d-0f557469e82d
 # ╠═84bc9a37-dce3-40cf-85ae-b9107339aabe
+# ╠═37f3c01d-553e-498d-aea5-9e31b071f6e8
+# ╠═f00613ba-d962-4fe8-8763-98e5af6007a7
+# ╠═613b1b99-7ba2-4c36-91d0-b5303bd2a9ec
 # ╟─a077d240-36e0-41cd-a4ff-f7e0ca62ca4e
 # ╠═2fe91b37-1c3f-49ce-bfa2-702a180b78a0
 # ╠═fa304120-14f9-4c1a-a430-0438db6743f3
 # ╟─282cd2e0-8b45-4625-af65-49f2167b1dc4
 # ╠═6f603c0b-b852-473f-9099-b6292ad395b9
 # ╠═076eb88e-fa80-40a0-9873-74329bf9b5a5
-# ╠═06e3dba4-39d4-490b-b5c3-cfe43f9e2bf7
 # ╠═6e9fadb4-879f-435c-bec4-45ed80866825
 # ╟─18b40b26-9338-4616-8deb-1a5c9a6a7ae8
 # ╟─1cd0c84c-2cca-4251-b718-822477ab0b31
-# ╠═8bab643a-9618-4d04-ad1d-0cdd3963a630
+# ╟─8bab643a-9618-4d04-ad1d-0cdd3963a630
 # ╠═5d68976b-cacd-4ac5-88e2-b669e2a29490
+# ╠═19509564-714a-47a5-948e-88c1eacfc6e9
+# ╠═aafa147d-2d25-40fa-abb9-ff4cc54764b6
 # ╠═b2c0fadb-1471-4fdc-a56c-e1313cbd3b58
 # ╟─56209a97-52d3-4d15-8e12-ea9fff19a1b1
 # ╟─572f1062-de7d-4bf1-a506-cd7c644390c0
@@ -3501,6 +3501,7 @@ version = "1.4.1+1"
 # ╟─db9c87a1-2af5-49b6-9335-3e15069e8822
 # ╠═44688b66-caae-46a1-85d7-a4c76a7838f2
 # ╟─b81ecc1b-ae19-4e8c-82c3-061377dbc857
+# ╠═25a2750f-8b75-401a-b7a5-2e51af868845
 # ╠═88a7ce82-2280-4b00-8e97-0bff66696b24
 # ╠═6d80d171-2ef7-4646-a289-cdeea175221e
 # ╟─00000000-0000-0000-0000-000000000001

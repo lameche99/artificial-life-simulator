@@ -1,3 +1,4 @@
 {
-    "github-enterprise.uri": "https://github.gatech.edu"
+    "github-enterprise.uri": "https://github.gatech.edu",
+    "julia.environmentPath": "c:\\Users\\kshenoy8\\OneDrive - Georgia Institute of Technology\\Documents\\Courses\\CSE 6730 Modelling and Simulation\\artificial-life-simulator"
 }
